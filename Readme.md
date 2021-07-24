@@ -4,9 +4,10 @@
 - nmap
     - Parameters
         - `-A` : Enable OS detection, version detection, script scanning, and traceroute
+        - `-p-` : Scan all ports
 - enum4linux
     - Parameters
-        - `-a` : 
+        - `-a` : Do all simple enumeration
 ## Web
 ### Scan Directory
 - [Dirsearch](https://github.com/maurosoria/dirsearch)
