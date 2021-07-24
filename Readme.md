@@ -26,7 +26,7 @@
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
-- [PEASS-ng](https://github.com/carlospolop/PEASS-ng)
+- [PEASS-ng](https://github.com/carlospolop/PEASS-ng) , [LinEnum](https://github.com/rebootuser/LinEnum)
     - Scan the system to find which can be use for privileges escalation
 - [Pspy](https://github.com/DominicBreuker/pspy)
     - Monitor the process
