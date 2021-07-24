@@ -1,7 +1,7 @@
 # RootMe Writeup
 上一篇寫英文的，學得好累喔，以後等心情好再來寫英文WPㄅ，這邊就寫中文的(也有可能出現晶晶體或喵喵體)做個紀錄喵。
 > 題目網址 : https://tryhackme.com/room/rrootme
-目標IP : 10.10.233.205
+<br>目標IP : 10.10.233.205
 ## Scanning
 - 起手式 nmap
     - `nmap -A 10.10.233.205`
