@@ -1,4 +1,4 @@
-# Pickle Rick
+# Pickle Rick Writeup
 > URL : https://tryhackme.com/room/picklerick
 IP: 10.10.223.99
 
