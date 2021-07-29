@@ -1,4 +1,4 @@
-# Anthem
+# Anthem Writeup
 > URL : https://tryhackme.com/room/anthem
 
 IP : 10.10.18.8
