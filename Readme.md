@@ -12,9 +12,16 @@
 ### Scan Directory
 - [Dirsearch](https://github.com/maurosoria/dirsearch)
 - [Githack-python3](https://github.com/tigert1998/GitHack-py3)
+### PHP
+- Bypass `system`
+	- `echo passthru("whoami")`
+	- `echo shell_exec("whoami")` 
+	- `echo exec("whoami")`
 ### Shell
 #### Web Shell
 - [b374k](https://github.com/b374k/b374k)
+- [windows-php-reverse-shell](https://github.com/Dhayalanb/windows-php-reverse-shell)
+
 #### Reverse Shell
 - https://reverse-shell.sh/
 - [Reverse Shell Cheatsheet](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md)
@@ -32,7 +39,7 @@
     - Monitor the process
 ### Command
 - `sudo -l`
-## Burp Force
+## Password Crack
 ### Software
 - Hydra
     - Crack online services password
@@ -44,6 +51,9 @@
     - Support tools
         - [ssh2john](https://github.com/openwall/john/blob/bleeding-jumbo/run/ssh2john.py)
         - gpg2john
+        - samdump2
+        	- NTLM 2 John
+        	- `samdump2 system sam > j.txt`
     - Usage
         - `john {file} --wordlist={wordlist}`
 - Hashcat
@@ -51,3 +61,10 @@
 ### Dictionary
 - rockyou.txt
 - https://github.com/danielmiessler/SecLists
+	- [xato-net-10-million-passwords-dup.txt](https://github.com/danielmiessler/SecLists/blob/master/Passwords/xato-net-10-million-passwords-dup.txt)
+### Online
+- https://crackstation.net/
+
+## Software
+- RDP
+	- `xfreerdp +drives /u:{username} /v:{ip}:{port}`
