@@ -96,11 +96,38 @@
 - ASPX
 	- https://raw.githubusercontent.com/SecWiki/WebShell-2/master/Aspx/awen%20asp.net%20webshell.aspx
 	- https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/asp/cmd.aspx
+- Adminer (SQLadmin)
+    - https://www.adminer.org/
 ### CMS
 #### Wordpress
 - WPScan
 - Enum user
     - `http://{ip}/index.php/?author=1`
+### MySQL injection
+#### SQL Command
+- Limit
+    - `LIMIT 0,1` , `LIMIT 1,1` , `LIMIT 2,1` ...
+        - Select only 1 data
+- Substring
+    - `SUBSTRING("ABC",1,1)`
+        - Will return `A`
+    - `SUBSTRING("ABC",2,1)`
+        - Will return `B`
+- ASCII
+    - `ASCII("A")`
+        - Will Return `65`
+- Concat
+    - `concat(1,':',2)`
+        - Will return `1:2`
+#### Dump Data
+- DB name
+    - `select schema_name from information_schema.schemata`
+- Table name
+    - `select table_name from information_schema.tables where table_schema='{db_name}'`
+- Column name
+    - `select column_name from information_schema.columns where table_name='{table_name}' and table_schema='{db_name}'`
+- Select data
+    - `select concat({username},':',{password}) from {db_name}.{password}`
 ## Shell
 ### Linux Shell
 - Find File
@@ -328,6 +355,7 @@ Scan the system to find which can be use for privileges escalation
 - Hashcat
     - Crack hash 
         - https://hashcat.net/wiki/doku.php?id=example_hashes
+    - `hashcat -m {mode} {hashes.txt} {wordlist.txt}`
 ### Dictionary
 - rockyou.txt
 - https://github.com/danielmiessler/SecLists
