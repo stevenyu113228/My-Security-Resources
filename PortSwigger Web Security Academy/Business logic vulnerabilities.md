@@ -565,7 +565,87 @@ while True:
 You can log in to your own account using the following credentials: wiener:peter 
 
 ### 題目解釋
+ECB 的分段加密
 
 ### 解答
 
-還沒寫完
+觀察登入有一個 Stay Logged in 的功能
+
+如果勾選後，餅乾會有一段 `stay-logged-in` 的加密字字串 `mM8ZfIZN71eVVdSx2gPP0ffp%2bnNEdmAF0s873Ar3nN0%3d`，他是 URLEncode 後的 Base64，可以轉回 Binary
+
+
+使用者選項的地方有一個變更 Email，如果輸入不符合規則的 email，例如 `aaa`，則餅乾會多一條 `notification=%2fLqGWQK5k%2bvxFU6tTukKAMl6IKMifrrTmBm27mnAMA8%3d` ，且上方會噴 `Invalid email address: aaa `
+
+
+試著把 `stay-logged-in` 裡面的 value 貼上 `notification`，會發現上方噴出了  `wiener:1644580020757` 是帳號名稱搭配 Timestamp 的組合，而且他就沒有顯示 `Invalid email address: ` 這些內容
+
+試著用 Cyberchef 來解 `stay-logged-in` 原本的內容
+- Cyberchef 參數
+    - URL Decode
+    - From Base64
+    - To Hex (Delimiter None)
+
+- 可以觀察出長度為 64 個字元，也就是 64\*4=256 Bits = 32 Bytes
+```
+98cf197c864def579555d4b1da03cfd1f7e9fa7344766005d2cf3bdc0af79cdd
+```
+
+再來解 `notification` 的內容，發現也是 256 bits
+
+發現當輸入 `aaaaaaaaaa` 時，輸出會變成
+```
+fcba865902b993ebf1154ead4ee90a00f63abe509e50cfb5a4c295161a27b1d9acba3d800071e6b64887044ea7a5cee9
+```
+也就是 96 \* 4 = 384 bits = 48 Bytes
+
+試著取上面的末 16 Bytes = 32 個 Hex 字元
+
+```
+acba3d800071e6b64887044ea7a5cee9
+```
+
+轉 Base64 再 URL Encode 後
+
+```
+rLo9gABx5rZIhwROp6XO6Q%3D%3D
+```
+
+會單純出現一個 `a` ， 所以可以確定是 ECB 的加密分段式
+
+
+接下來我們可以試著 `aaaaaaaaameow` 
+
+加密出
+```
+fcba865902b993ebf1154ead4ee90a00f63abe509e50cfb5a4c295161a27b1d9d88bfd6a7da6f153a073649e511173d3
+```
+
+取末 32 個 Hex 字元後反解，就出現 `meow` 了
+
+試著把
+```
+administrator:1644580020757
+```
+
+Padding 變成
+
+```
+aaaaaaaaaadministrator:1644580020757
+```
+
+加密後的值
+
+```
+fcba865902b993ebf1154ead4ee90a00f63abe509e50cfb5a4c295161a27b1d95496c0886a7c65ec90fad45a7556d607ed0ce1f7a68070c34cfda20858001c60
+```
+
+取末64位，再轉回 URL Encode 後的 Base64
+
+
+```
+VJbAiGp8ZeyQ%2BtRadVbWB%2B0M4femgHDDTP2iCFgAHGA%3D
+```
+
+就能順利解出 `administrator:1644580020757` ㄌ
+
+再把這個值貼到 `stay-logged-in`，然後把 Session 刪掉，就會出現 Admini Panel 了
